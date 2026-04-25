@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GitHub 入门学习打卡笔记</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    background: #0d1117;
+    color: #e6edf3;
+    line-height: 1.7;
+    min-height: 100vh;
+  }
+
+  a { color: #58a6ff; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* header */
+  header {
+    background: linear-gradient(135deg, #161b22 0%, #1c2128 100%);
+    border-bottom: 1px solid #30363d;
+    padding: 40px 20px 30px;
+    text-align: center;
+  }
+  header h1 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #f0f6fc;
+    margin-bottom: 8px;
+  }
+  header p {
+    color: #8b949e;
+    font-size: 0.95rem;
+  }
+  .badge {
+    display: inline-block;
+    background: #238636;
+    color: #fff;
+    font-size: 0.75rem;
+    padding: 2px 10px;
+    border-radius: 20px;
+    margin-top: 10px;
+  }
+
+  /* progress bar */
+  .progress-wrap {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px 20px 0;
+  }
+  .progress-info {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    color: #8b949e;
+    margin-bottom: 6px;
+  }
+  .progress-track {
+    background: #21262d;
+    border-radius: 10px;
+    height: 8px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    background: linear-gradient(90deg, #238636, #3fb950);
+    height: 100%;
+    border-radius: 10px;
+    transition: width 0.4s ease;
+    width: 0%;
+  }
+
+  /* main container */
+  .container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+
+  /* summary table */
+  .summary-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 24px 0;
+    font-size: 0.88rem;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid #30363d;
+  }
+  .summary-table th {
+    background: #161b22;
+    color: #f0f6fc;
+    padding: 10px 14px;
+    text-align: left;
+    font-weight: 600;
+    border-bottom: 1px solid #30363d;
+  }
+  .summary-table td {
+    padding: 9px 14px;
+    border-bottom: 1px solid #21262d;
+    color: #c9d1d9;
+  }
+  .summary-table tr:last-child td { border-bottom: none; }
+  .summary-table tr:hover td { background: #161b22; }
+
+  /* checkpoint */
+  .checkpoint {
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    overflow: hidden;
+    background: #161b22;
+  }
+
+  .checkpoint-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s;
+  }
+  .checkpoint-header:hover { background: #1c2128; }
+
+  .ck-num {
+    min-width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: #21262d;
+    border: 2px solid #30363d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: #8b949e;
+    flex-shrink: 0;
+    transition: all 0.3s;
+  }
+  .ck-num.done {
+    background: #238636;
+    border-color: #238636;
+    color: #fff;
+  }
+  .ck-num.active {
+    border-color: #58a6ff;
+    color: #58a6ff;
+    box-shadow: 0 0 0 3px rgba(88,166,255,0.2);
+  }
+
+  .ck-title {
+    flex: 1;
+    font-weight: 600;
+    font-size: 1rem;
+    color: #f0f6fc;
+  }
+  .ck-title.done { color: #8b949e; text-decoration: line-through; }
+
+  .ck-toggle {
+    color: #8b949e;
+    font-size: 0.8rem;
+    transition: transform 0.3s;
+  }
+  .ck-toggle.open { transform: rotate(90deg); }
+
+  .checkpoint-body {
+    display: none;
+    border-top: 1px solid #21262d;
+    padding: 18px 18px 20px 18px;
+  }
+  .checkpoint-body.open { display: block; }
+
+  .tag {
+    display: inline-block;
+    font-size: 0.7rem;
+    padding: 1px 8px;
+    border-radius: 12px;
+    margin-right: 6px;
+    font-weight: 600;
+  }
+  .tag-know { background: #1f3a5f; color: #58a6ff; }
+  .tag-action { background: #2d5116; color: #3fb950; }
+
+  h3 { font-size: 0.9rem; color: #f0f6fc; margin: 16px 0 8px; font-weight: 600; }
+  h3:first-child { margin-top: 0; }
+
+  p, li { color: #c9d1d9; font-size: 0.92rem; }
+  ul { padding-left: 20px; }
+  li { margin-bottom: 5px; }
+
+  code {
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 0.85em;
+    color: #e6edf3;
+  }
+
+  pre {
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    padding: 12px 14px;
+    overflow-x: auto;
+    margin: 10px 0;
+  }
+  pre code {
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: 0.85rem;
+    color: #e6edf3;
+  }
+
+  /* task checklist */
+  .task-list {
+    list-style: none;
+    padding: 0;
+    margin-top: 10px;
+  }
+  .task-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 7px 0;
+    border-bottom: 1px solid #21262d;
+    cursor: pointer;
+    transition: color 0.15s;
+  }
+  .task-list li:last-child { border-bottom: none; }
+  .task-list li:hover { color: #f0f6fc; }
+  .task-list li.done { color: #8b949e; }
+  .task-list li.done .task-text { text-decoration: line-through; }
+
+  .task-check {
+    min-width: 20px;
+    height: 20px;
+    border: 2px solid #30363d;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    color: transparent;
+    flex-shrink: 0;
+    margin-top: 2px;
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+  .task-check.checked {
+    background: #238636;
+    border-color: #238636;
+    color: #fff;
+  }
+
+  /* confirm badge */
+  .confirm {
+    background: #1c2128;
+    border: 1px solid #30363d;
+    border-left: 3px solid #3fb950;
+    border-radius: 4px;
+    padding: 10px 14px;
+    font-size: 0.85rem;
+    color: #8b949e;
+    margin-top: 14px;
+  }
+
+  /* summary */
+  .summary {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 20px;
+    margin-top: 30px;
+  }
+  .summary h2 { font-size: 1.1rem; color: #f0f6fc; margin-bottom: 14px; }
+
+  /* footer */
+  footer {
+    text-align: center;
+    padding: 30px 20px;
+    color: #484f58;
+    font-size: 0.8rem;
+  }
+
+  @media (max-width: 600px) {
+    header h1 { font-size: 1.4rem; }
+    .ck-title { font-size: 0.9rem; }
+    .summary-table { font-size: 0.8rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>GitHub 入门学习打卡笔记</h1>
+  <p>从零开始，逐关打卡，真正掌握 GitHub 核心用法</p>
+  <span class="badge">预计完成 5 天 · 每天 1-2 关</span>
+</header>
+
+<div class="progress-wrap">
+  <div class="progress-info">
+    <span id="progress-label">0 / 10 关已完成</span>
+    <span id="progress-pct">0%</span>
+  </div>
+  <div class="progress-track">
+    <div class="progress-fill" id="progress-fill"></div>
+  </div>
+</div>
+
+<div class="container">
+
+  <table class="summary-table">
+    <thead>
+      <tr>
+        <th>关卡</th>
+        <th>内容</th>
+        <th>核心目标</th>
+        <th>状态</th>
+      </tr>
+    </thead>
+    <tbody id="summary-body">
+    </tbody>
+  </table>
+
+  <!-- 关卡 0 -->
+  <div class="checkpoint" id="ck0">
+    <div class="checkpoint-header" onclick="toggle(0)">
+      <div class="ck-num" id="ck0-num">0</div>
+      <div class="ck-title" id="ck0-title">关卡 0：认识 GitHub</div>
+      <div class="ck-toggle" id="ck0-toggle">▶</div>
+    </div>
+    <div class="checkpoint-body" id="ck0-body">
+      <h3><span class="tag tag-know">知识要点</span></h3>
+      <p>GitHub = 代码的"云端项目文件夹"。它的本质和网盘差不多——帮你存文件、记录改动。但比网盘更聪明：能追踪"谁在什么时候改了什么"，改坏了能一键回滚。</p>
+      <p style="margin-top:10px;">GitHub 上线于 2008 年，2018 年被微软以 75 亿美元收购。现在托管超过 4 亿个代码仓库，1 亿+ 活跃用户。引爆了开源文化——Python、React、安卓等知名项目都在上面。</p>
+
+      <h3><span class="tag tag-action">打卡任务</span></h3>
+      <ul class="task-list" id="ck0-tasks">
+        <li onclick="checkTask(this, 0)"><div class="task-check" id="ck0-t0">✓</div><span class="task-text">阅读知识要点，心里复述一遍"GitHub 是什么"</span></li>
+        <li onclick="checkTask(this, 0)"><div class="task-check" id="ck0-t1">✓</div><span class="task-text">打开 <a href="https://github.com" target="_blank">github.com</a>，看一眼首页，感受界面</span></li>
+      </ul>
+
+      <div class="confirm">✅ 打卡确认：能说出 GitHub 的三个主要作用（存代码、记改动、协作）</div>
+    </div>
+  </div>
+
+  <!-- 关卡 1 -->
+  <div class="checkpoint" id="ck1">
+    <div class="checkpoint-header" onclick="toggle(1)">
+      <div class="ck-num" id="ck1-num">1</div>
+      <div class="ck-title" id="ck1-title">关卡 1：搞懂最核心的四个概念</div>
+      <div class="ck-toggle" id="ck1-toggle">▶</div>
+    </div>
+    <div class="checkpoint-body" id="ck1-body">
+      <h3><span class="tag tag-know">知识要点</span></h3>
+      <p>GitHub 有很多术语，但下面 4 个是骨架，弄懂了就懂了一半：</p>
+      <ul>
+        <li><strong>Repository（仓库，Repo）</strong>：项目文件夹，分 Public（公开）和 Private（私密）</li>
+        <li><strong>Branch（分支）</strong>：从主线复制出来的"实验线"，改坏了不影响主线。main = 正式版，branch = 草稿</li>
+        <li><strong>Commit（提交）</strong>：每完成一轮修改，按一次"保存"并附上说明，类似带备注的存档</li>
+        <li><strong>Pull Request（PR）</strong>："请把我的改动合并进主线"，发起申请让维护者审核</li>
+      </ul>
+
+      <h3><span class="tag tag-action">打卡任务</span></h3>
+      <ul class="task-list" id="ck1-tasks">
+        <li onclick="checkTask(this, 1)"><div class="task-check" id="ck1-t0">✓</div><span class="task-text">在脑海里复述：Repo / Branch / Commit / PR 是什么意思</span></li>
+        <li onclick="checkTask(this, 1)"><div class="task-check" id="ck1-t1">✓</div><span class="task-text">用一句话向自己解释这四个概念（讲给自己听）</span></li>
+      </ul>
+
+      <div class="confirm">✅ 打卡确认：关卡 0 的任务全部打勾</div>
+    </div>
+  </div>
+
+  <!-- 关卡 2 -->
+  <div class="checkpoint" id="ck2">
+    <div class="checkpoint-header" onclick="toggle(2)">
+      <div class="ck-num" id="ck2-num">2</div>
+      <div class="ck-title" id="ck2-title">关卡 2：注册账号 + 建第一个 Repo</div>
+      <div class="ck-toggle" id="ck2-toggle">▶</div>
+    </div>
+    <div class="checkpoint-body" id="ck2-body">
+      <h3><span class="tag tag-know">知识要点</span></h3>
+      <p>打开 <a href="https://github.com/signup" target="_blank">github.com/signup</a> 免费注册。注册完成后：</p>
+      <ol style="margin-top:8px; padding-left:20px;">
+        <li>点击右上角 <strong>+</strong> → <strong>New repository</strong></li>
+        <li>Repository name 填写：<code>hello-world</code></li>
+        <li>选择 <strong>Public</strong>（公开，让全世界看到你的进步）</li>
+        <li>勾选 <strong>Add a README file</strong>（自动生成说明文件）</li>
+        <li>点击 <strong>Create repository</strong></li>
+      </ol>
+      <p style="margin-top:10px;">就这样，你有了第一个 GitHub 仓库。</p>
+
+      <h3><span class="tag tag-action">打卡任务</span></h3>
+      <ul class="task-list" id="ck2-tasks">
+        <li onclick="checkTask(this, 2)"><div class="task-check" id="ck2-t0">✓</div><span class="task-text">注册 GitHub 账号（如已有，跳过）</span></li>
+        <li onclick="checkTask(this, 2)"><div class="task-check" id="ck2-t1">✓</div><span class="task-text">创建名为 <code>hello-world</code> 的公开 Repo</span></li>
+        <li onclick="checkTask(this, 2)"><div class="task-check" id="ck2-t2">✓</div><span class="task-text">在 Repo 页面找到并点击 <strong>commits</strong>，感受改动记录</span></li>
+      </ul>
+
+      <div class="confirm">✅ 打卡确认：在 github.com 上能看到自己的 <code>hello-world</code> 仓库，commits 页面显示至少 1 条提交记录</div>
+    </div>
+  </div>
+
+  <!-- 关卡 3 -->
+  <div class="checkpoint" id="ck3">
+    <div class="checkpoint-header" onclick="toggle(3)">
+      <div class="ck-num" id="ck3-num">3</div>
+      <div class="ck-title" id="ck3-title">关卡 3：编辑文件，理解 Commit</div>
+      <div class="ck-toggle" id="ck3-toggle">▶</div>
+    </div>
+    <div class="checkpoint-body" id="ck3-body">
+      <h3><span class="tag tag-know">知识要点</span></h3>
+      <p>进入 <code>hello-world</code> Repo，点击 README.md 文件上的 <strong>Edit（铅笔图标）</strong>，修改内容：</p>
+      <pre><code># Hello World
+
+这是我在 GitHub 上的第一个仓库！
+今天开始学习 GitHub — 2026年4月25日。</code></pre>
+      <p>改完后页面会提示 <strong>Commit changes</strong>，在 commit 框里写备注，如：<code>添加了自我介绍和日期</code>，然后点击 <strong>Commit changes</strong>。</p>
+      <p style="margin-top:8px;">这就是一次完整的 GitHub 操作：编辑 → 写备注 → 提交。</p>
+
+      <h3><span class="tag tag-action">打卡任务</span></h3>
+      <ul class="task-list" id="ck3-tasks">
+        <li onclick="checkTask(this, 3)"><div class="task-check" id="ck3-t0">✓</div><span class="task-text">在 <code>hello-world</code> Repo 里编辑 README.md，写几句自我介绍</span></li>
+        <li onclick="checkTask(this, 3)"><div class="task-check" id="ck3-t1">✓</div><span class="task-text">提交时写一句有意义的 commit 信息（不是默认的"Update README.md"）</span></li>
+        <li onclick="checkTask(this, 3)"><div class="task-check" id="ck3-t2">✓</div><span class="task-text">点进 <strong>commits</strong> 页面，找到自己的 commit，确认信息正确</span></li>
+      </ul>
+
+      <div class="confirm">✅ 打卡确认：commits 历史里可以看到自己的 commit，备注清晰可读</div>
+    </div>
+  </div>
+
+  <!-- 关卡 4 -->
+  <div class="checkpoint" id="ck4">
+    <div class="checkpoint-header" onclick="toggle(4)">
+      <div class="ck-num" id="ck4-num">4</div>
+      <div class="ck-title" id="ck4-title">关卡 4：理解 Branch（分支）</div>
+      <div class="ck-toggle" id="ck4-toggle">▶</div>
+    </div>
+    <div class="checkpoint-body" id="ck4-body">
+      <h3><span class="tag tag-know">知识要点</span></h3>
+      <p>Branch 就是解决"想改又怕改乱"问题的工具——先复制一份出来，在副本里改，改好了再合并回来。</p>
+      <p style="margin-top:8px;">在 GitHub 上，默认分支叫 <code>main</code>（主线/稳定版）。</p>
+      <p>点击 Repo 里的 <strong>&lt;&gt; Code</strong> 按钮，旁边就是 <code>main</code> 下拉菜单——这就是切换分支的地方。</p>
+      <ol style="margin-top:8px; padding-left:20px;">
+        <li>点 main 下拉菜单 → 输入新分支名（如 <code>test-branch</code>）→ 点击 <strong>Create branch</strong></li>
+        <li>你就拥有了一条新分支，可以随便折腾，不影响 main</li>
+      </ol>
+
+      <h3><span class="tag tag-action">打卡任务</span></h3>
+      <ul class="task-list" id="ck4-tasks">
+        <li onclick="checkTask(this, 4)"><div class="task-check" id="ck4-t0">✓</div><span class="task-text">在 <code>hello-world</code> Repo 里新建一条分支，名字叫 <code>test-branch</code></span></li>
+        <li onclick="checkTask(this, 4)"><div class="task-check" id="ck4-t1">✓</div><span class="task-text">切换到 <code>test-branch</code>，修改 README.md，加一行："这是我分支里的实验内容"</span></li>
+        <li onclick="checkTask(this, 4)"><div class="task-check" id="ck4-t2">✓</div><span class="task-text">提交这次修改（commit message 写：<code>在 test-branch 里实验</code>）</span></li>
+        <li onclick="checkTask(this, 4)"><div class="task-check" id="ck4-t3">✓</div><span class="task-text">切回 main 分支，确认 README.md 内容没有变化</span></li>
+      </ul>
+
+      <div class="confirm">✅ 打卡确认：能看到 main 和 test-branch 各有一版内容，互不干扰</div>
+    </div>
+  </div>
+
+  <!-- 关卡 5 -->
+  <div class="checkpoint" id="ck5">
+    <div class="checkpoint-header" onclick="toggle(5)">
+      <div class="ck-num" id="ck5-num">5</div>
+      <div class="ck-title" id="ck5-title">关卡 5：发起第一个 Pull Request</div>
+      <div class="ck-toggle" id="ck5-toggle">▶</div>
+    </div>
+    <div class="checkpoint-body" id="ck5-body">
+      <h3><span class="tag tag-know">知识要点</span></h3>
+      <p>PR = Pull Request，意思是"请把我的改动拉进来"。当你确认分支里的改动没问题了，就可以发起 PR，请求合并到 main。</p>
+      <p style="margin-top:8px;"><strong>操作步骤：</strong></p>
+      <ol style="margin-top:6px; padding-left:20px;">
+        <li>切换到 <code>test-branch</code></li>
+        <li>点击上方的 <strong>Contribute</strong> 按钮 → <strong>Open pull request</strong></li>
+        <li>标题自动填充，可以不改</li>
+        <li>底部点击 <strong>Create pull request</strong></li>
+      </ol>
+      <p style="margin-top:8px;">PR 页面会显示：改了哪些文件、多了哪几行、少了哪几行，一目了然。</p>
+
+      <h3><span class="tag tag-action">打卡任务</span></h3>
+      <ul class="task-list" id="ck5-tasks">
+        <li onclick="checkTask(this, 5)"><div class="task-check" id="ck5-t0">✓</div><span class="task-text">在 <code>hello-world</code> Repo 里，从 <code>test-branch</code> 发起一个 Pull Request</span></li>
+        <li onclick="checkTask(this, 5)"><div class="task-check" id="ck5-t1">✓</div><span class="task-text">在 PR 页面查看 <strong>changed files</strong>，感受"改动一览"的感觉</span></li>
+        <li onclick="checkTask(this, 5)"><div class="task-check" id="ck5-t2">✓</div><span class="task-text"><strong>合并</strong>这个 PR（点击 Merge → Confirm merge）</span></li>
+        <li onclick="checkTask(this, 5)"><div class="task-check" id="ck5-t3">✓</div><span class="task-text">合并后切到 main 分支，确认 README.md 已更新为分支内容</span></li>
+      </ul>
+
+      <div class="confirm">✅ 打卡确认：PR 已合并，main 分支的 README.md 包含了分支里的修改内容</div>
+    </div>
+  </div>
+
+  <!-- 关卡 6 -->
+  <div class="checkpoint" id="ck6">
+    <div class="checkpoint-header" onclick="toggle(6)">
+      <div class="ck-num" id="ck6-num">6</div>
+      <div class="ck-title" id="ck6-title">关卡 6：理解 GitHub 的社交属性</div>
+      <div class="ck-toggle" id="ck6-toggle">▶</div>
+    </div>
+    <div class="checkpoint-body" id="ck6-body">
+      <h3><span class="tag tag-know">知识要点</span></h3>
+      <ul>
+        <li><strong>Star（收藏）</strong>：点个星，像给微博点赞。Star 数量是衡量项目热门程度的指标</li>
+        <li><strong>Fork（派生）</strong>：把别人的仓库复制一份到自己的账号下，可以随便改，不影响原项目。这是参与开源的最简单方式</li>
+        <li><strong>Watch（关注）</strong>：Watch 一个仓库后，它有更新你会收到通知，适合跟踪你关心的项目</li>
+        <li><strong>Explore</strong>：<a href="https://github.com/explore" target="_blank">github.com/explore</a> 是发现页，里面有 Trending（热门项目）和各种主题合集</li>
+      </ul>
+
+      <h3><span class="tag tag-action">打卡任务</span></h3>
+      <ul class="task-list" id="ck6-tasks">
+        <li onclick="checkTask(this, 6)"><div class="task-check" id="ck6-t0">✓</div><span class="task-text">去 <a href="https://github.com/explore" target="_blank">github.com/explore</a> 逛逛，看看 Trending 页面</span></li>
+        <li onclick="checkTask(this, 6)"><div class="task-check" id="ck6-t1">✓</div><span class="task-text">找一个感兴趣的项目，点进去看看（感受界面，不用做任何操作）</span></li>
+        <li onclick="checkTask(this, 6)"><div class="task-check" id="ck6-t2">✓</div><span class="task-text">随手 Star 1-2 个觉得有意思的仓库</span></li>
+        <li onclick="checkTask(this, 6)"><div class="task-check" id="ck6-t3">✓</div><span class="task-text">了解 <strong>Fork</strong>：在任意一个公开仓库页面，找到 Fork 按钮</span></li>
+      </ul>
+
+      <div class="confirm">✅ 打卡确认：能在 Explore 找到感兴趣的项目，说出 Star / Fork / Watch 三者的区别</div>
+    </div>
+  </div>
+
+  <!-- 关卡 7 -->
+  <div class="checkpoint" id="ck7">
+    <div class="checkpoint-header" onclick="toggle(7)">
+      <div class="ck-num" id="ck7-num">7</div>
+      <div class="ck-title" id="ck7-title">关卡 7：用 gh CLI 连接 GitHub</div>
+      <div class="ck-toggle" id="ck7-toggle">▶</div>
+    </div>
+    <div class="checkpoint-body" id="ck7-body">
+      <h3><span class="tag tag-know">知识要点</span></h3>
+      <p>你已经安装了 gh（GitHub CLI），现在来完成初始化授权：</p>
+      <pre><code>gh auth login</code></pre>
+      <p>按提示操作：选择 GitHub.com → 选择 HTTPS → 浏览器弹出授权确认 → 命令行自动继续。</p>
+      <p style="margin-top:8px;"><strong>验证安装成功：</strong></p>
+      <pre><code>gh auth status        # 查看登录状态
+gh repo list          # 列出你的仓库</code></pre>
+      <p style="margin-top:8px;"><strong>克隆你之前建的 hello-world：</strong></p>
+      <pre><code>gh repo clone 你的GitHub用户名/hello-world</code></pre>
+
+      <h3><span class="tag tag-action">打卡任务</span></h3>
+      <ul class="task-list" id="ck7-tasks">
+        <li onclick="checkTask(this, 7)"><div class="task-check" id="ck7-t0">✓</div><span class="task-text">运行 <code>gh auth login</code> 完成授权</span></li>
+        <li onclick="checkTask(this, 7)"><div class="task-check" id="ck7-t1">✓</div><span class="task-text">运行 <code>gh auth status</code> 确认已登录</span></li>
+        <li onclick="checkTask(this, 7)"><div class="task-check" id="ck7-t2">✓</div><span class="task-text">运行 <code>gh repo clone 你的用户名/hello-world</code> 克隆到本地</span></li>
+        <li onclick="checkTask(this, 7)"><div class="task-check" id="ck7-t3">✓</div><span class="task-text">在克隆下来的文件夹里，<code>cat README.md</code> 查看内容</span></li>
+      </ul>
+
+      <div class="confirm">✅ 打卡确认：<code>gh auth status</code> 显示 logged in，克隆的文件夹里能看到 README.md 内容</div>
+    </div>
+  </div>
+
+  <!-- 关卡 8 -->
+  <div class="checkpoint" id="ck8">
+    <div class="checkpoint-header" onclick="toggle(8)">
+      <div class="ck-num" id="ck8-num">8</div>
+      <div class="ck-title" id="ck8-title">关卡 8：用 gh 做一次完整的提交推送</div>
+      <div class="ck-toggle" id="ck8-toggle">▶</div>
+    </div>
+    <div class="checkpoint-body" id="ck8-body">
+      <h3><span class="tag tag-know">知识要点</span></h3>
+      <p>现在你在本地有了一个仓库，来做一次完整的 Git 操作流程：</p>
+      <pre><code>cd hello-world                      # 进入仓库目录
+echo "新增加一行测试内容" >> README.md   # 在文件末尾追加一行
+git add .                         # 打包所有改动
+git commit -m "添加测试内容"       # 提交，附备注
+git push                          # 推送到 GitHub 云端</code></pre>
+      <p style="margin-top:8px;">解释：<code>git add .</code> = 打包所有改动 → <code>git commit -m "备注"</code> = 正式存档 → <code>git push</code> = 推送到云端。</p>
+      <p>然后去网页版刷新 <code>hello-world</code>，看 README.md 是否已更新。</p>
+
+      <h3><span class="tag tag-action">打卡任务</span></h3>
+      <ul class="task-list" id="ck8-tasks">
+        <li onclick="checkTask(this, 8)"><div class="task-check" id="ck8-t0">✓</div><span class="task-text">在本地仓库里新增或修改任意内容</span></li>
+        <li onclick="checkTask(this, 8)"><div class="task-check" id="ck8-t1">✓</div><span class="task-text">完整执行 <code>add</code> → <code>commit</code> → <code>push</code> 全流程</span></li>
+        <li onclick="checkTask(this, 8)"><div class="task-check" id="ck8-t2">✓</div><span class="task-text">在 github.com 网页上刷新，确认改动已同步上去</span></li>
+      </ul>
+
+      <div class="confirm">✅ 打卡确认：网页上的 README.md 显示了你刚 push 的内容</div>
+    </div>
+  </div>
+
+  <!-- 关卡 9 -->
+  <div class="checkpoint" id="ck9">
+    <div class="checkpoint-header" onclick="toggle(9)">
+      <div class="ck-num" id="ck9-num">9</div>
+      <div class="ck-title" id="ck9-title">关卡 9：认识 Issues</div>
+      <div class="ck-toggle" id="ck9-toggle">▶</div>
+    </div>
+    <div class="checkpoint-body" id="ck9-body">
+      <h3><span class="tag tag-know">知识要点</span></h3>
+      <p>Issue = 问题/任务跟踪系统。开源项目用它来：</p>
+      <ul>
+        <li>记录 Bug（有人发现问题了，开一个 Issue）</li>
+        <li>提需求（有人建议加新功能）</li>
+        <li>做任务分配（维护者把任务列成 Issue）</li>
+      </ul>
+      <p style="margin-top:8px;">GitHub Issues 界面类似 Todo 列表，每个 Issue 有：标题、正文描述、状态（Open / Closed）、评论。</p>
+
+      <h3><span class="tag tag-action">打卡任务</span></h3>
+      <ul class="task-list" id="ck9-tasks">
+        <li onclick="checkTask(this, 9)"><div class="task-check" id="ck9-t0">✓</div><span class="task-text">在 <code>hello-world</code> Repo 里新建一个 Issue，标题：<code>测试 Issue</code>，内容：<code>这是我创建的第二个 GitHub Issue</code></span></li>
+        <li onclick="checkTask(this, 9)"><div class="task-check" id="ck9-t1">✓</div><span class="task-text">给这个 Issue 加一个 Label，点击 Labels → 选择 <code>enhancement</code></span></li>
+        <li onclick="checkTask(this, 9)"><div class="task-check" id="ck9-t2">✓</div><span class="task-text"><strong>Close</strong> 这个 Issue（因为只是测试）</span></li>
+      </ul>
+
+      <div class="confirm">✅ 打卡确认：在 Issues 页面能看到已关闭的"测试 Issue"</div>
+    </div>
+  </div>
+
+  <!-- 总结 -->
+  <div class="summary">
+    <h2>学习路径回顾</h2>
+    <table class="summary-table" style="margin:0; font-size:0.85rem;">
+      <thead>
+        <tr><th>关卡</th><th>内容</th><th>核心掌握</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>0</td><td>认识 GitHub</td><td>GitHub 是什么</td></tr>
+        <tr><td>1</td><td>四大核心概念</td><td>Repo / Branch / Commit / PR</td></tr>
+        <tr><td>2</td><td>建第一个 Repo</td><td>网页操作</td></tr>
+        <tr><td>3</td><td>编辑 + Commit</td><td>改文件 → 存档</td></tr>
+        <tr><td>4</td><td>Branch 分支</td><td>实验线不影响主线</td></tr>
+        <tr><td>5</td><td>Pull Request</td><td>申请合并</td></tr>
+        <tr><td>6</td><td>社交属性</td><td>Star / Fork / Watch</td></tr>
+        <tr><td>7</td><td>gh CLI</td><td>命令行登录 + 克隆</td></tr>
+        <tr><td>8</td><td>完整推送流程</td><td>add → commit → push</td></tr>
+        <tr><td>9</td><td>Issues</td><td>任务跟踪</td></tr>
+      </tbody>
+    </table>
+
+    <h2 style="margin-top:20px;">打卡完成清单</h2>
+    <ul class="task-list" id="summary-tasks">
+      <li onclick="checkTask(this, 's')" data-gate="0"><div class="task-check" id="sum-t0">✓</div><span class="task-text">关卡 0：认识 GitHub</span></li>
+      <li onclick="checkTask(this, 's')" data-gate="1"><div class="task-check" id="sum-t1">✓</div><span class="task-text">关卡 1：四大核心概念</span></li>
+      <li onclick="checkTask(this, 's')" data-gate="2"><div class="task-check" id="sum-t2">✓</div><span class="task-text">关卡 2：注册 + 建第一个 Repo</span></li>
+      <li onclick="checkTask(this, 's')" data-gate="3"><div class="task-check" id="sum-t3">✓</div><span class="task-text">关卡 3：编辑 + Commit</span></li>
+      <li onclick="checkTask(this, 's')" data-gate="4"><div class="task-check" id="sum-t4">✓</div><span class="task-text">关卡 4：Branch 分支</span></li>
+      <li onclick="checkTask(this, 's')" data-gate="5"><div class="task-check" id="sum-t5">✓</div><span class="task-text">关卡 5：Pull Request</span></li>
+      <li onclick="checkTask(this, 's')" data-gate="6"><div class="task-check" id="sum-t6">✓</div><span class="task-text">关卡 6：社交属性</span></li>
+      <li onclick="checkTask(this, 's')" data-gate="7"><div class="task-check" id="sum-t7">✓</div><span class="task-text">关卡 7：gh CLI</span></li>
+      <li onclick="checkTask(this, 's')" data-gate="8"><div class="task-check" id="sum-t8">✓</div><span class="task-text">关卡 8：完整推送流程</span></li>
+      <li onclick="checkTask(this, 's')" data-gate="9"><div class="task-check" id="sum-t9">✓</div><span class="task-text">关卡 9：Issues</span></li>
+    </ul>
+  </div>
+
+</div>
+
+<footer>
+  GitHub 入门学习打卡笔记 · 2026-04-25 · 数据保存在浏览器本地
+</footer>
+
+<script>
+  // State
+  const state = {};
+  const totalCheckpoints = 10;
+
+  // Init from localStorage
+  try {
+    const saved = JSON.parse(localStorage.getItem('github_checkpoint_state') || '{}');
+    Object.assign(state, saved);
+  } catch(e) {}
+
+  function save() {
+    try { localStorage.setItem('github_checkpoint_state', JSON.stringify(state)); } catch(e) {}
+  }
+
+  function getCkTotalTasks(ck) { return document.getElementById('ck' + ck + '-tasks').querySelectorAll('li').length; }
+  function getCkDoneTasks(ck) {
+    return document.getElementById('ck' + ck + '-tasks').querySelectorAll('li.done').length;
+  }
+
+  function updateProgress() {
+    let totalDone = 0;
+    for (let i = 0; i < totalCheckpoints; i++) {
+      const done = getCkDoneTasks(i);
+      const total = getCkTotalTasks(i);
+      if (done === total && total > 0) totalDone++;
+    }
+
+    const pct = Math.round((totalDone / totalCheckpoints) * 100);
+    document.getElementById('progress-label').textContent = totalDone + ' / ' + totalCheckpoints + ' 关已完成';
+    document.getElementById('progress-pct').textContent = pct + '%';
+    document.getElementById('progress-fill').style.width = pct + '%';
+
+    // Update summary table
+    const tbody = document.getElementById('summary-body');
+    tbody.innerHTML = '';
+    for (let i = 0; i < totalCheckpoints; i++) {
+      const done = getCkDoneTasks(i);
+      const total = getCkTotalTasks(i);
+      const isDone = done === total && total > 0;
+      const titles = [
+        '认识 GitHub', '四大核心概念', '注册 + 建第一个 Repo', '编辑 + Commit',
+        'Branch 分支', 'Pull Request', '社交属性', 'gh CLI',
+        '完整推送流程', 'Issues'
+      ];
+      const row = document.createElement('tr');
+      row.innerHTML = '<td>' + i + '</td><td>' + titles[i] + '</td><td>—</td><td>' + (isDone ? '✅' : '⬜') + '</td>';
+      tbody.appendChild(row);
+    }
+  }
+
+  function updateCkVisual(ck) {
+    const done = getCkDoneTasks(ck);
+    const total = getCkTotalTasks(ck);
+    const numEl = document.getElementById('ck' + ck + '-num');
+    const titleEl = document.getElementById('ck' + ck + '-title');
+
+    if (done === total && total > 0) {
+      numEl.classList.add('done');
+      titleEl.classList.add('done');
+    } else {
+      numEl.classList.remove('done');
+      titleEl.classList.remove('done');
+    }
+  }
+
+  function toggle(ck) {
+    const body = document.getElementById('ck' + ck + '-body');
+    const toggle = document.getElementById('ck' + ck + '-toggle');
+    if (body.classList.contains('open')) {
+      body.classList.remove('open');
+      toggle.classList.remove('open');
+    } else {
+      body.classList.add('open');
+      toggle.classList.add('open');
+    }
+  }
+
+  function checkTask(li, ck) {
+    li.classList.toggle('done');
+    const checked = li.classList.contains('done');
+    const checkbox = li.querySelector('.task-check');
+    checkbox.classList.toggle('checked', checked);
+
+    // Save state
+    const id = checkbox.id;
+    state[id] = checked;
+    save();
+
+    updateCkVisual(ck);
+    updateProgress();
+  }
+
+  // Restore state on load
+  window.addEventListener('DOMContentLoaded', function() {
+    for (const id in state) {
+      if (state[id]) {
+        const el = document.getElementById(id);
+        if (el) {
+          const li = el.closest('li');
+          if (li) {
+            li.classList.add('done');
+            el.classList.add('checked');
+          }
+        }
+      }
+    }
+    for (let i = 0; i < totalCheckpoints; i++) updateCkVisual(i);
+    updateProgress();
+
+    // Open first incomplete checkpoint
+    for (let i = 0; i < totalCheckpoints; i++) {
+      const done = getCkDoneTasks(i);
+      const total = getCkTotalTasks(i);
+      if (done < total) { toggle(i); break; }
+    }
+  });
+</script>
+
+</body>
+</html>
