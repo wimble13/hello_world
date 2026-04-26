@@ -1,11 +1,4 @@
-# hello_world
-实践文档
-这是我在 GitHub 上的第一个仓库！
-今天开始学习 GitHub — 2026年4月25日。
-//我又来了
-
-我来捣乱的。。。。
-//
-
-//我改邪归正了，要回到main中
-通过github cli更改readme文件
+我通过在hellw_world仓库学习和发布一些AI学习知识：
+2026.4.25 学习GitHub相关知识，发布了github_study.html
+2026.4.26 学习Python相关知识，发布了Python_stud.html
+持续学习中。。。。。
