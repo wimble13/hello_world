@@ -1,0 +1,2152 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Python 学习打卡 - Bill's Learning Tracker</title>
+<script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
+<style>
+  :root {
+    --bg: #0f0f1a;
+    --card: #1a1a2e;
+    --accent: #7c3aed;
+    --accent2: #06b6d4;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --border: #2d2d4a;
+    --sidebar-w: 260px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+  }
+
+  /* Sidebar */
+  #sidebar {
+    width: var(--sidebar-w);
+    min-height: 100vh;
+    background: var(--card);
+    border-right: 1px solid var(--border);
+    position: fixed;
+    top: 0; left: 0;
+    overflow-y: auto;
+    z-index: 100;
+    transition: transform 0.3s;
+  }
+  #sidebar h2 {
+    padding: 20px 16px 12px;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+  }
+  .week-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 10px 16px;
+    background: none;
+    border: none;
+    color: var(--text);
+    font-size: 14px;
+    cursor: pointer;
+    text-align: left;
+    border-left: 3px solid transparent;
+    transition: all 0.2s;
+  }
+  .week-btn:hover { background: rgba(124,58,237,0.1); }
+  .week-btn.active {
+    background: rgba(124,58,237,0.15);
+    border-left-color: var(--accent);
+    color: #c4b5fd;
+  }
+  .week-btn .w-num {
+    font-size: 11px;
+    background: var(--border);
+    padding: 2px 6px;
+    border-radius: 4px;
+    min-width: 20px;
+    text-align: center;
+  }
+  .week-btn.done .w-num { background: var(--success); color: #fff; }
+  .week-btn.current .w-num { background: var(--accent); color: #fff; }
+  .week-progress {
+    padding: 8px 16px 12px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .progress-bar {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    margin-top: 6px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 2px;
+    transition: width 0.4s ease;
+  }
+
+  /* Main */
+  #main {
+    margin-left: var(--sidebar-w);
+    flex: 1;
+    padding: 0;
+  }
+
+  /* Header */
+  #main-header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: rgba(15,15,26,0.9);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  #main-header h1 {
+    font-size: 18px;
+    font-weight: 600;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  #streak-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(245,158,11,0.15);
+    border: 1px solid rgba(245,158,11,0.3);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    color: #fbbf24;
+  }
+
+  /* Week Header */
+  #week-header {
+    padding: 32px 40px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  #week-header .week-tag {
+    font-size: 12px;
+    color: var(--accent2);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+  }
+  #week-header h2 { font-size: 26px; margin-bottom: 8px; }
+  #week-header .goals {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  #week-header .goal-tag {
+    background: rgba(124,58,237,0.15);
+    border: 1px solid rgba(124,58,237,0.3);
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    color: #c4b5fd;
+  }
+
+  /* Content area */
+  #content-area {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 0;
+    min-height: calc(100vh - 80px);
+  }
+
+  /* Sections */
+  .section {
+    padding: 28px 32px;
+    border-bottom: 1px solid var(--border);
+  }
+  .section h3 {
+    font-size: 16px;
+    color: #e2e8f0;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section h3 .icon {
+    width: 28px; height: 28px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+  }
+  .section p { color: var(--muted); font-size: 14px; line-height: 1.7; }
+
+  /* Code blocks */
+  .code-block {
+    background: #0d0d1a;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin: 12px 0;
+    overflow: hidden;
+  }
+  .code-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 14px;
+    background: rgba(45,45,74,0.5);
+    border-bottom: 1px solid var(--border);
+  }
+  .code-header span { font-size: 12px; color: var(--muted); font-family: monospace; }
+  .run-btn {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    padding: 4px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  .run-btn:hover { opacity: 0.85; }
+  .run-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .code-block pre {
+    padding: 16px;
+    overflow-x: auto;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: #a9b1d6;
+    max-height: 400px;
+    overflow-y: auto;
+  }
+  .code-block pre .kw { color: #bb9af7; }
+  .code-block pre .str { color: #9ece6a; }
+  .code-block pre .cm { color: #565f89; font-style: italic; }
+  .code-block pre .fn { color: #7dcfff; }
+  .code-block pre .nb { color: #ff9e64; }
+  .code-output {
+    padding: 10px 14px;
+    background: #070711;
+    border-top: 1px solid var(--border);
+    font-family: monospace;
+    font-size: 13px;
+    color: #9aa5ce;
+    min-height: 36px;
+    white-space: pre-wrap;
+  }
+  .code-output.error { color: #f7768e; }
+
+  /* Practice section */
+  .practice-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 14px;
+  }
+  .practice-card h4 {
+    font-size: 15px;
+    margin-bottom: 10px;
+    color: #e2e8f0;
+  }
+  .practice-card p { font-size: 13px; color: var(--muted); margin-bottom: 12px; }
+  .check-in-btn {
+    background: linear-gradient(135deg, var(--success), #059669);
+    color: #fff;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 8px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .check-in-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(16,185,129,0.3); }
+  .check-in-btn.checked {
+    background: var(--border);
+    color: var(--muted);
+    cursor: default;
+    transform: none;
+    box-shadow: none;
+  }
+
+  /* Daily plan */
+  .day-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+    margin-top: 14px;
+  }
+  .day-item {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 6px;
+    text-align: center;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .day-item .day-name { color: var(--muted); font-size: 11px; margin-bottom: 4px; }
+  .day-item .day-status { font-size: 16px; margin-top: 4px; }
+  .day-item:hover { border-color: var(--accent); }
+  .day-item.done { border-color: var(--success); background: rgba(16,185,129,0.08); }
+  .day-item.done .day-status { color: var(--success); }
+  .day-item.current { border-color: var(--accent); background: rgba(124,58,237,0.1); }
+  .day-item.current .day-status { color: var(--accent); }
+
+  /* Right panel */
+  #right-panel {
+    border-left: 1px solid var(--border);
+    padding: 24px 20px;
+    position: sticky;
+    top: 60px;
+    height: calc(100vh - 60px);
+    overflow-y: auto;
+  }
+  #right-panel h3 {
+    font-size: 14px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 16px;
+  }
+
+  /* Pyodide console */
+  #py-console {
+    background: #0d0d1a;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  #py-console-header {
+    padding: 8px 12px;
+    background: rgba(45,45,74,0.5);
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .py-status {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #f59e0b;
+  }
+  .py-status.ready { background: var(--success); }
+  #py-output {
+    padding: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    min-height: 120px;
+    max-height: 220px;
+    overflow-y: auto;
+    color: #9aa5ce;
+    white-space: pre-wrap;
+  }
+  #py-output .py-out { color: #9aa5ce; }
+  #py-output .py-err { color: #f7768e; }
+  #py-input-row {
+    display: flex;
+    border-top: 1px solid var(--border);
+  }
+  #py-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    padding: 10px 12px;
+    color: #e2e8f0;
+    font-family: monospace;
+    font-size: 13px;
+    outline: none;
+  }
+  #py-run-btn {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    padding: 0 16px;
+    cursor: pointer;
+    font-size: 13px;
+  }
+
+  /* Code runner textarea */
+  .code-editor {
+    width: 100%;
+    background: #0d0d1a;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    color: #a9b1d6;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 13.5px;
+    line-height: 1.6;
+    resize: vertical;
+    min-height: 120px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .code-editor:focus { border-color: var(--accent); }
+
+  /* Stats */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .stat-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    text-align: center;
+  }
+  .stat-card .stat-val {
+    font-size: 28px;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .stat-card .stat-label { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+  /* Animations */
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  .section { animation: fadeIn 0.3s ease; }
+
+  /* Mobile */
+  @media (max-width: 900px) {
+    #sidebar { transform: translateX(-100%); }
+    #sidebar.open { transform: translateX(0); }
+    #main { margin-left: 0; }
+    #content-area { grid-template-columns: 1fr; }
+    #right-panel { position: static; height: auto; border-left: none; border-top: 1px solid var(--border); }
+    .day-grid { grid-template-columns: repeat(4, 1fr); }
+  }
+  #menu-btn {
+    display: none;
+    background: none;
+    border: none;
+    color: var(--text);
+    font-size: 22px;
+    cursor: pointer;
+    margin-right: 12px;
+  }
+  @media (max-width: 900px) { #menu-btn { display: block; } }
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<div id="sidebar">
+  <h2>📚 Python 学习</h2>
+  <div class="week-progress">
+    <span id="total-progress-text">已完成 0/9 周</span>
+    <div class="progress-bar"><div class="progress-fill" id="total-progress-bar" style="width:0%"></div></div>
+  </div>
+  <button class="week-btn active" data-week="1" onclick="showWeek(1)">
+    <span class="w-num">1</span> 基础语法
+  </button>
+  <button class="week-btn" data-week="2" onclick="showWeek(2)">
+    <span class="w-num">2</span> 函数与数据结构
+  </button>
+  <button class="week-btn" data-week="3" onclick="showWeek(3)">
+    <span class="w-num">3</span> 文件/JSON/正则
+  </button>
+  <button class="week-btn" data-week="4" onclick="showWeek(4)">
+    <span class="w-num">4</span> pandas与API
+  </button>
+  <button class="week-btn" data-week="5" onclick="showWeek(5)">
+    <span class="w-num">5</span> 数据可视化
+  </button>
+  <button class="week-btn" data-week="6" onclick="showWeek(6)">
+    <span class="w-num">6</span> LLM API调用
+  </button>
+  <button class="week-btn" data-week="7" onclick="showWeek(7)">
+    <span class="w-num">7</span> 定时任务与OCR
+  </button>
+  <button class="week-btn" data-week="8" onclick="showWeek(8)">
+    <span class="w-num">8</span> 综合项目
+  </button>
+  <button class="week-btn" data-week="9" onclick="showWeek(9)">
+    <span class="w-num">9</span> Trae工具实战
+  </button>
+</div>
+
+<!-- Main -->
+<div id="main">
+  <div id="main-header">
+    <div style="display:flex;align-items:center">
+      <button id="menu-btn" onclick="toggleSidebar()">☰</button>
+      <h1>🐍 Python 学习打卡</h1>
+    </div>
+    <div id="streak-badge">🔥 学习连续 <span id="streak-count">0</span> 天</div>
+  </div>
+
+  <div id="week-header">
+    <div class="week-tag">WEEK <span id="header-week-num">1</span></div>
+    <h2 id="header-title">基础语法</h2>
+    <p id="header-desc" style="color:var(--muted);font-size:14px;margin-top:4px">掌握变量、数据类型、运算符、条件判断和循环</p>
+    <div class="goals" id="header-goals"></div>
+  </div>
+
+  <div id="content-area">
+    <div>
+      <div class="section" id="section-overview"></div>
+      <div class="section" id="section-topics"></div>
+      <div class="section" id="section-practice"></div>
+      <div class="section" id="section-daily"></div>
+    </div>
+
+    <!-- Right Panel -->
+    <div id="right-panel">
+      <h3>📊 学习统计</h3>
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-val" id="stat-weeks">0</div><div class="stat-label">完成周数</div></div>
+        <div class="stat-card"><div class="stat-val" id="stat-days">0</div><div class="stat-label">打卡天数</div></div>
+        <div class="stat-card"><div class="stat-val" id="stat-codes">0</div><div class="stat-label">运行代码</div></div>
+        <div class="stat-card"><div class="stat-val" id="stat-streak">0</div><div class="stat-label">连续天数</div></div>
+      </div>
+
+      <h3>🖥️ Python 控制台</h3>
+      <div id="py-console">
+        <div id="py-console-header">
+          <div class="py-status" id="py-status-dot"></div>
+          <span id="py-status-text">加载中...</span>
+        </div>
+        <div id="py-output"></div>
+        <div id="py-input-row">
+          <input id="py-input" placeholder="输入 Python 代码后回车运行..." onkeydown="if(event.key==='Enter')runPyCommand()">
+          <button id="py-run-btn" onclick="runPyCommand()">运行</button>
+        </div>
+      </div>
+
+      <h3 style="margin-top:20px">📋 快速修改代码</h3>
+      <textarea class="code-editor" id="quick-code" placeholder="输入代码片段，点击上方「运行」按钮"></textarea>
+      <button class="run-btn" style="margin-top:8px;width:100%;padding:10px" onclick="runQuickCode()">▶ 运行代码</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// WEEKLY CONTENT DATA
+// ============================================================
+const WEEKS = [
+  {
+    num: 1,
+    title: "基础语法",
+    desc: "掌握变量、数据类型、运算符、条件判断和循环",
+    goals: ["变量与数据类型", "运算符", "条件判断", "循环", "猜数字游戏"],
+    topics: [
+      {
+        title: "Hello World",
+        icon: "👋",
+        content: `<p>Python 的第一行代码，永远从这里开始：</p>
+<div class="code-block">
+  <div class="code-header"><span>python</span><button class="run-btn" onclick="runCode(this)">▶ 运行</button></div>
+  <pre>print("Hello World!")</pre>
+  <div class="code-output"></div>
+</div>`
+      },
+      {
+        title: "变量与数据类型",
+        icon: "📦",
+        content: `<p>Python 是动态类型语言，不需要声明类型：</p>
+<div class="code-block">
+  <div class="code-header"><span>python</span><button class="run-btn" onclick="runCode(this)">▶ 运行</button></div>
+  <pre name="code">name = "Bill"          <span class="cm"># 字符串</span>
+age = 40               <span class="cm"># 整数</span>
+height = 170.5         <span class="cm"># 浮点数</span>
+is_student = False     <span class="cm"># 布尔值</span>
+
+print(f"我叫{name}，今年{age}岁，身高{height}cm")</pre>
+  <div class="code-output"></div>
+</div>
+<p>常见数据类型：<code>int</code>, <code>float</code>, <code>str</code>, <code>bool</code>, <code>list</code>, <code>dict</code></p>`
+      },
+      {
+        title: "运算符",
+        icon: "🔢",
+        content: `<div class="code-block">
+  <div class="code-header"><span>python</span><button class="run-btn" onclick="runCode(this)">▶ 运行</button></div>
+  <pre>a, b = 10, 3
+print(<span class="nb">a</span> + <span class="nb">b</span>)   <span class="cm"># 13</span>
+print(<span class="nb">a</span> - <span class="nb">b</span>)   <span class="cm"># 7</span>
+print(<span class="nb">a</span> * <span class="nb">b</span>)   <span class="cm"># 30</span>
+print(<span class="nb">a</span> / <span class="nb">b</span>)   <span class="cm"># 3.333...</span>
+print(<span class="nb">a</span> // <span class="nb">b</span>)  <span class="cm"># 3  (整除)</span>
+print(<span class="nb">a</span> % <span class="nb">b</span>)   <span class="cm"># 1  (余数)</span>
+print(<span class="nb">a</span> ** <span class="nb">b</span>)  <span class="cm"># 1000 (幂)</span>
+
+<span class="cm"># 比较</span>
+print(<span class="nb">a</span> == <span class="nb">b</span>)  <span class="cm"># False</span>
+print(<span class="nb">a</span> != <span class="nb">b</span>)  <span class="cm"># True</span>
+
+<span class="cm"># 逻辑</span>
+print(<span class="kw">True</span> <span class="kw">and</span> <span class="kw">False</span>)  <span class="cm"># False</span>
+print(<span class="kw">True</span> <span class="kw">or</span> <span class="kw">False</span>)   <span class="cm"># True</span>
+print(<span class="kw">not</span> <span class="kw">True</span>)        <span class="cm"># False</span></pre>
+  <div class="code-output"></div>
+</div>`
+      },
+      {
+        title: "条件判断",
+        icon: "🔀",
+        content: `<div class="code-block">
+  <div class="code-header"><span>python</span><button class="run-btn" onclick="runCode(this)">▶ 运行</button></div>
+  <pre>score = <span class="nb">85</span>
+
+<span class="kw">if</span> score >= <span class="nb">90</span>:
+    print(<span class="str">"优秀"</span>)
+<span class="kw">elif</span> score >= <span class="nb">70</span>:
+    print(<span class="str">"良好"</span>)
+<span class="kw">elif</span> score >= <span class="nb">60</span>:
+    print(<span class="str">"及格"</span>)
+<span class="kw">else</span>:
+    print(<span class="str">"不及格"</span>)</pre>
+  <div class="code-output"></div>
+</div>`
+      },
+      {
+        title: "for 循环",
+        icon: "🔁",
+        content: `<div class="code-block">
+  <div class="code-header"><span>python</span><button class="run-btn" onclick="runCode(this)">▶ 运行</button></div>
+  <pre><span class="cm"># 打印 1~10</span>
+<span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(<span class="nb">1</span>, <span class="nb">11</span>):
+    print(i, end=<span class="str">" "</span>)
+
+<span class="cm"># 遍历列表</span>
+fruits = [<span class="str">"苹果"</span>, <span class="str">"香蕉"</span>, <span class="str">"橙子"</span>]
+<span class="kw">for</span> fruit <span class="kw">in</span> fruits:
+    print(fruit)</pre>
+  <div class="code-output"></div>
+</div>`
+      },
+      {
+        title: "while 循环",
+        icon: "⏳",
+        content: `<div class="code-block">
+  <div class="code-header"><span>python</span><button class="run-btn" onclick="runCode(this)">▶ 运行</button></div>
+  <pre>count = <span class="nb">0</span>
+<span class="kw">while</span> count < <span class="nb">5</span>:
+    print(count)
+    count += <span class="nb">1</span>
+
+<span class="cm"># continue 跳过 / break 退出</span>
+<span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(<span class="nb">10</span>):
+    <span class="kw">if</span> i == <span class="nb">3</span>:
+        <span class="kw">continue</span>
+    <span class="kw">if</span> i == <span class="nb">7</span>:
+        <span class="kw">break</span>
+    print(i, end=<span class="str">" "</span>)</pre>
+  <div class="code-output"></div>
+</div>`
+      }
+    ],
+    practices: [
+      {
+        title: "练习 1：猜数字游戏",
+        desc: "用 input() 和 random 生成一个 1~10 的随机数，让用户猜测，提示太大或太小，直到猜对为止。",
+        solution: `import random
+
+target = random.randint(1, 10)
+guess = 0
+print("我想了一个1~10的数字，来猜猜看！")
+while guess != target:
+    guess = int(input("你的猜测: "))
+    if guess < target:
+        print("太小了，再试试！")
+    elif guess > target:
+        print("太大了，减少一点！")
+print("🎉 恭喜猜对了！答案是", target)`
+      },
+      {
+        title: "练习 2：输出乘法表",
+        desc: "用双重循环输出 1~9 的乘法表（九九表）。",
+        solution: `for i in range(1, 10):
+    for j in range(1, i+1):
+        print(f"{j}x{i}={i*j}", end="\t")
+    print()`
+      },
+      {
+        title: "练习 3：找出列表最大值",
+        desc: "不使用 max() 函数，手动遍历找最大值。",
+        solution: `numbers = [34, 7, 23, 88, 56, 12]
+max_val = numbers[0]
+for n in numbers:
+    if n > max_val:
+        max_val = n
+print(f"最大值是: {max_val}")`
+      }
+    ],
+    daily: [
+      "安装 Python，配置编辑器，跑通 Hello World",
+      "学习变量、数据类型、运算符，做 5 道练习题",
+      "学习条件判断 if/elif/else，写猜数字游戏",
+      "学习 for/while 循环，写乘法表",
+      "综合练习：写一个成绩评级程序",
+      "整理本周代码到文件夹，复习一遍",
+      "休息 or 做个小工具（文件批量改名）"
+    ]
+  },
+  {
+    num: 2,
+    title: "函数与数据结构",
+    desc: "掌握函数定义调用、列表、元组、字典、集合、字符串",
+    goals: ["函数定义与参数", "列表/元组/字典/集合", "列表推导式", "字符串处理", "通讯录练习"],
+    topics: [
+      {
+        title: "函数",
+        icon: "⚙️",
+        content: `<div class="code-block">
+  <div class="code-header"><span>python</span><button class="run-btn" onclick="runCode(this)">▶ 运行</button></div>
+  <pre><span class="kw">def</span> <span class="fn">greet</span>(name):
+    <span class="cm">"""打招呼函数 — 文档字符串"""</span>
+    <span class="kw">return</span> f<span class="str">"你好，{name}！"</span>
+
+message = <span class="fn">greet</span>(<span class="str">"Bill"</span>)
+print(message)
+
+<span class="cm"># 参数默认值</span>
+<span class="kw">def</span> <span class="fn">power</span>(base, exponent=<span class="nb">2</span>):
+    <span class="kw">return</span> base ** exponent
+
+print(<span class="fn">power</span>(<span class="nb">3</span>))      <span class="cm"># 9  (默认平方)</span>
+print(<span class="fn">power</span>(<span class="nb">3</span>, <span class="nb">3</span>))   <span class="cm"># 27 (立方)</span>
+
+<span class="cm"># 返回多个值（元组解包）</span>
+<span class="kw">def</span> <span class="fn">calc</span>(a, b):
+    <span class="kw">return</span> a + b, a - b, a * b
+
+add, sub, mul = <span class="fn">calc</span>(<span class="nb">10</span>, <span class="nb">3</span>)
+print(add, sub, mul)
+
+<span class="cm"># *args 和 **kwargs</span>
+<span class="kw">def</span> <span class="fn">sum_all</span>(*numbers):
+    <span class="kw">return</span> <span class="fn">sum</span>(numbers)
+
+print(<span class="fn">sum_all</span>(<span class="nb">1</span>, <span class="nb">2</span>, <span class="nb">3</span>, <span class="nb">4</span>, <span class="nb">5</span>))</pre>
+  <div class="code-output"></div>
+</div>`
+      },
+      {
+        title: "列表（List）",
+        icon: "📋",
+        content: `<div class="code-block">
+  <div class="code-header"><span>python</span><button class="run-btn" onclick="runCode(this)">▶ 运行</button></div>
+  <pre>fruits = [<span class="str">"苹果"</span>, <span class="str">"香蕉"</span>, <span class="str">"橙子"</span>]
+
+<span class="cm"># 索引（从0开始）</span>
+print(fruits[<span class="nb">0</span>])    <span class="cm"># 苹果</span>
+print(fruits[-<span class="nb">1</span>])   <span class="cm"># 橙子（最后一个）</span>
+
+<span class="cm"># 切片</span>
+print(fruits[<span class="nb">0</span>:<span class="nb">2</span>])   <span class="cm"># ['苹果', '香蕉']</span>
+
+<span class="cm"># 添加</span>
+fruits.append(<span class="str">"葡萄"</span>)      <span class="cm"># 末尾加</span>
+fruits.insert(<span class="nb">1</span>, <span class="str">"梨"</span>)     <span class="cm"># 插入到索引1</span>
+
+<span class="cm"># 列表推导式</span>
+squares = [x**<span class="nb">2</span> <span class="kw">for</span> x <span class="kw">in</span> <span class="fn">range</span>(<span class="nb">1</span>, <span class="nb">6</span>)]
+print(squares)
+
+<span class="cm"># 过滤</span>
+evens = [x <span class="kw">for</span> x <span class="kw">in</span> <span class="fn">range</span>(<span class="nb">10</span>) <span class="kw">if</span> x % <span class="nb">2</span> == <span class="nb">0</span>]
+print(evens)</pre>
+  <div class="code-output"></div>
+</div>`
+      },
+      {
+        title: "字典（Dict）",
+        icon: "🗂️",
+        content: `<div class="code-block">
+  <div class="code-header"><span>python</span><button class="run-btn" onclick="runCode(this)">▶ 运行</button></div>
+  <pre>person = {
+    <span class="str">"name"</span>: <span class="str">"Bill"</span>,
+    <span class="str">"age"</span>: <span class="nb">40</span>,
+    <span class="str">"city"</span>: <span class="str">"广州"</span>
+}
+
+<span class="cm"># 访问</span>
+print(person[<span class="str">"name"</span>])           <span class="cm"># Bill</span>
+print(person.<span class="fn">get</span>(<span class="str">"job"</span>, <span class="str">"未知"</span>))  <span class="cm"># 未知（带默认值）</span>
+
+<span class="cm"># 添加/修改</span>
+person[<span class="str">"job"</span>] = <span class="str">"工程师"</span>
+
+<span class="cm"># 遍历</span>
+<span class="kw">for</span> key, value <span class="kw">in</span> person.<span class="fn">items</span>():
+    print(f<span class="str">"{key}: {value}"</span>)
+
+<span class="cm"># 字典推导式</span>
+squares_dict = {x: x**<span class="nb">2</span> <span class="kw">for</span> x <span class="kw">in</span> <span class="fn">range</span>(<span class="nb">5</span>)}
+print(squares_dict)</pre>
+  <div class="code-output"></div>
+</div>`
+      },
+      {
+        title: "字符串处理",
+        icon: "✂️",
+        content: `<div class="code-block">
+  <div class="code-header"><span>python</span><button class="run-btn" onclick="runCode(this)">▶ 运行</button></div>
+  <pre>text = <span class="str">"  Hello, Python!  "</span>
+
+print(text.<span class="fn">strip</span>())       <span class="cm"># 去空格</span>
+print(text.<span class="fn">lower</span>())       <span class="cm"># 转小写</span>
+print(text.<span class="fn">upper</span>())       <span class="cm"># 转大写</span>
+print(text.<span class="fn">replace</span>(<span class="str">"Python"</span>, <span class="str">"World"</span>))  <span class="cm"># 替换</span>
+
+<span class="cm"># 分割</span>
+sentence = <span class="str">"Python是门很棒的语言"</span>
+print(sentence.<span class="fn">split</span>(<span class="str">"是"</span>))
+
+<span class="cm"># 格式化</span>
+name, age = <span class="str">"Bill"</span>, <span class="nb">40</span>
+print(f<span class="str">"我叫{name}，今年{age}岁"</span>)
+
+<span class="cm"># 查找</span>
+print(<span class="str">"Python"</span> <span class="kw">in</span> text)</pre>
+  <div class="code-output"></div>
+</div>`
+      }
+    ],
+    practices: [
+      {
+        title: "练习 1：学生成绩管理",
+        desc: "用字典列表管理学生成绩，找出数学最高分，计算每人平均分。",
+        solution: `students = [
+    {"name": "张三", "math": 85, "english": 92},
+    {"name": "李四", "math": 76, "english": 88},
+    {"name": "王五", "math": 93, "english": 79},
+]
+
+best = max(students, key=lambda s: s["math"])
+print(f"数学最高分: {best['name']}，分数: {best['math']}")
+
+for s in students:
+    avg = (s["math"] + s["english"]) / 2
+    s["avg"] = round(avg, 1)
+
+for s in students:
+    print(f"{s['name']}: 数学{s['math']}, 英语{s['english']}, 平均{s['avg']}")`
+      },
+      {
+        title: "练习 2：词频统计",
+        desc: "统计一句话中每个词出现的次数。用 Counter 更简单。",
+        solution: `from collections import Counter
+
+text = "苹果 香蕉 苹果 橙子 香蕉 苹果 香蕉 苹果"
+words = text.split()
+count = Counter(words)
+print(count)
+print("最常见的词:", count.most_common(1))`
+      },
+      {
+        title: "练习 3：文件批量改名",
+        desc: "用 os 模块批量重命名文件夹中的文件为 file_001.txt, file_002.txt...",
+        solution: `import os
+
+folder = "/tmp/test/"
+os.makedirs(folder, exist_ok=True)
+
+for i in range(1, 6):
+    with open(os.path.join(folder, f"old_{i}.txt"), "w") as f:
+        f.write(f"文件{i}")
+
+files = os.listdir(folder)
+for i, filename in enumerate(sorted(files), 1):
+    ext = os.path.splitext(filename)[1]
+    new_name = f"file_{i:03d}{ext}"
+    os.rename(os.path.join(folder, filename), os.path.join(folder, new_name))
+    print(f"{filename} → {new_name}")`
+      }
+    ],
+    daily: [
+      "学习函数定义，写5个不同功能的函数",
+      "列表的增删改查 + 列表推导式练习",
+      "字典操作，完成学生成绩管理练习",
+      "字符串处理方法练习",
+      "综合：写一个通讯录程序（增删改查）",
+      "批量改名脚本，整理代码到文件夹",
+      "休息 or 把周记整理成 Markdown"
+    ]
+  },
+  {
+    num: 3,
+    title: "文件/JSON/正则",
+    desc: "读写文件、JSON数据解析、正则表达式、异常处理",
+    goals: ["文件读写与编码", "JSON解析", "正则表达式", "异常处理", "实用脚本"],
+    topics: [
+      {
+        title: "文件读写",
+        icon: "📄",
+        content: `<div class="code-block">
+  <div class="code-header"><span>python</span><button class="run-btn" onclick="runCode(this)">▶ 运行</button></div>
+  <pre><span class="cm"># 写入文件</span>
+with <span class="fn">open</span>(<span class="str">"/tmp/test.txt"</span>, <span class="str">"w"</span>, encoding=<span class="str">"utf-8"</span>) <span class="kw">as</span> f:
+    f.<span class="fn">write</span>(<span class="str">"第一行\\n"</span>)
+    f.<span class="fn">write</span>(<span class="str">"第二行\\n"</span>)
+
+<span class="cm"># 读取文件</span>
+with <span class="fn">open</span>(<span class="str">"/tmp/test.txt"</span>, <span class="str">"r"</span>, encoding=<span class="str">"utf-8"</span>) <span class="kw">as</span> f:
+    content = f.<span class="fn">read</span>()
+    print(content)
+
+<span class="cm"># 逐行读取</span>
+with <span class="fn">open</span>(<span class="str">"/tmp/test.txt"</span>, <span class="str">"r"</span>) <span class="kw">as</span> f:
+    <span class="kw">for</span> line <span class="kw">in</span> f:
+        print(line.<span class="fn">strip</span>())</pre>
+  <div class="code-output"></div>
+</div>`
+      },
+      {
+        title: "JSON 数据",
+        icon: "📋",
+        content: `<div class="code-block">
+  <div class="code-header"><span>python</span><button class="run-btn" onclick="runCode(this)">▶ 运行</button></div>
+  <pre><span class="kw">import</span> json
+
+data = {
+    <span class="str">"name"</span>: <span class="str">"Bill"</span>,
+    <span class="str">"age"</span>: <span class="nb">40</span>,
+    <span class="str">"skills"</span>: [<span class="str">"Python"</span>, <span class="str">"JavaScript"</span>]
+}
+
+<span class="cm"># 序列化（dict → JSON字符串）</span>
+json_str = json.<span class="fn">dumps</span>(data, ensure_ascii=<span class="kw">False</span>, indent=<span class="nb">2</span>)
+print(json_str)
+
+<span class="cm"># 反序列化（JSON字符串 → dict）</span>
+parsed = json.<span class="fn">loads</span>(json_str)
+print(parsed[<span class="str">"name"</span>])
+
+<span class="cm"># 读写 JSON 文件</span>
+with <span class="fn">open</span>(<span class="str">"/tmp/data.json"</span>, <span class="str">"w"</span>, encoding=<span class="str">"utf-8"</span>) <span class="kw">as</span> f:
+    json.<span class="fn">dump</span>(data, f, ensure_ascii=<span class="kw">False</span>, indent=<span class="nb">2</span>)
+
+with <span class="fn">open</span>(<span class="str">"/tmp/data.json"</span>, <span class="str">"r"</span>) <span class="kw">as</span> f:
+    loaded = json.<span class="fn">load</span>(f)
+    print(<span class="str">"loaded:"</span>, loaded)</pre>
+  <div class="code-output"></div>
+</div>`
+      },
+      {
+        title: "正则表达式",
+        icon: "🔍",
+        content: `<div class="code-block">
+  <div class="code-header"><span>python</span><button class="run-btn" onclick="runCode(this)">▶ 运行</button></div>
+  <pre><span class="kw">import</span> re
+
+text = <span class="str">"我的邮箱是 bill@qq.com 和 info@example.org"</span>
+
+<span class="cm"># 提取邮箱</span>
+emails = re.<span class="fn">findall</span>(<span class="str">r"[\\w.+-]+@[\\w-]+\\.[\\w.-]+"</span>, text)
+print(emails)
+
+<span class="cm"># 匹配手机号（11位数字）</span>
+phone_text = <span class="str">"张三的电话是13812345678，李四是13998765432"</span>
+phones = re.<span class="fn">findall</span>(<span class="str">r"1[3-9]\\d{9}"</span>, phone_text)
+print(phones)
+
+<span class="cm"># 替换</span>
+print(re.<span class="fn">sub</span>(<span class="str">r"\\d+"</span>, <span class="str">"XXX"</span>, phone_text))
+
+<span class="cm"># 分割</span>
+parts = re.<span class="fn">split</span>(<span class="str">r"\\s+|,"</span>, <span class="str">"苹果,香蕉 橙子 葡萄"</span>)
+print(parts)</pre>
+  <div class="code-output"></div>
+</div>`
+      },
+      {
+        title: "异常处理",
+        icon: "⚠️",
+        content: `<div class="code-block">
+  <div class="code-header"><span>python</span><button class="run-btn" onclick="runCode(this)">▶ 运行</button></div>
+  <pre><span class="kw">try</span>:
+    num = <span class="fn">int</span>(<span class="str">"abc"</span>)
+<span class="kw">except</span> ValueError <span class="kw">as</span> e:
+    print(f<span class="str">"值错误: {e}"</span>)
+
+<span class="kw">try</span>:
+    result = <span class="nb">10</span> / <span class="nb">0</span>
+<span class="kw">except</span> ZeroDivisionError:
+    print(<span class="str">"不能除以零！"</span>)
+<span class="kw">else</span>:
+    print(<span class="str">"一切正常"</span>)
+<span class="kw">finally</span>:
+    print(<span class="str">"都会执行"</span>)
+
+<span class="cm"># 主动抛出异常</span>
+age = -<span class="nb">5</span>
+<span class="kw">if</span> age < <span class="nb">0</span>:
+    <span class="kw">raise</span> ValueError(<span class="str">"年龄不能是负数"</span>)</pre>
+  <div class="code-output"></div>
+</div>`
+      }
+    ],
+    practices: [
+      {
+        title: "练习 1：日志分析",
+        desc: "读取一个日志文件，统计 ERROR、WARNING、INFO 出现的次数。",
+        solution: `import re
+from collections import Counter
+
+log = """
+2024-01-01 10:00:01 ERROR 连接数据库失败
+2024-01-01 10:00:02 INFO 用户登录: bill
+2024-01-01 10:00:03 WARNING 密码错误
+2024-01-01 10:00:04 ERROR 超时
+2024-01-01 10:00:05 INFO 完成交易
+2024-01-01 10:00:06 ERROR 连接数据库失败
+"""
+
+levels = re.findall(r'(ERROR|WARNING|INFO)', log)
+counter = Counter(levels)
+for level, count in counter.items():
+    print(f"{level}: {count}次")`
+      },
+      {
+        title: "练习 2：JSON 配置文件处理",
+        desc: "创建并读取一个配置文件，修改其中一项值后保存。",
+        solution: `import json
+
+config = {
+    "theme": "dark",
+    "language": "zh-CN",
+    "notifications": True,
+    "font_size": 14
+}
+
+with open("/tmp/config.json", "w", encoding="utf-8") as f:
+    json.dump(config, f, indent=2, ensure_ascii=False)
+
+with open("/tmp/config.json", "r") as f:
+    loaded = json.load(f)
+
+loaded["font_size"] = 16
+loaded["theme"] = "light"
+
+with open("/tmp/config.json", "w") as f:
+    json.dump(loaded, f, indent=2)
+
+print("配置已更新:", loaded)`
+      }
+    ],
+    daily: [
+      "文件读写操作，完成 txt 文件读写练习",
+      "JSON 序列化与反序列化练习",
+      "正则表达式基本用法：提取邮箱、手机号",
+      "异常处理 try/except 练习",
+      "综合：写一个日志分析脚本",
+      "整理代码，理解文件路径处理",
+      "休息"
+    ]
+  },
+  {
+    num: 4,
+    title: "pandas与API",
+    desc: "pandas DataFrame、CSV/Excel读写、数据清洗、requests调API",
+    goals: ["pandas DataFrame", "CSV/Excel读写", "数据清洗", "requests API调用", "数据汇总练习"],
+    topics: [
+      {
+        title: "pandas DataFrame",
+        icon: "📊",
+        content: `<div class="code-block">
+  <div class="code-header"><span>python</span><button class="run-btn" onclick="runCode(this)">▶ 运行</button></div>
+  <pre><span class="kw">import</span> pandas <span class="kw">as</span> pd
+
+df = pd.<span class="fn">DataFrame</span>({
+    <span class="str">"姓名"</span>: [<span class="str">"张三"</span>, <span class="str">"李四"</span>, <span class="str">"王五"</span>],
+    <span class="str">"数学"</span>: [<span class="nb">85</span>, <span class="nb">92</span>, <span class="nb">78</span>],
+    <span class="str">"英语"</span>: [<span class="nb">92</span>, <span class="nb">85</span>, <span class="nb">90</span>],
+    <span class="str">"班级"</span>: [<span class="str">"A"</span>, <span class="str">"B"</span>, <span class="str">"A"</span>]
+})
+
+print(df)
+print(<span class="str">"前2行:"</span>)
+print(df.<span class="fn">head</span>(<span class="nb">2</span>))
+print(<span class="str">"形状:"</span>, df.shape)
+print(<span class="str">"统计摘要:"</span>)
+print(df.<span class="fn">describe</span>())
+print(<span class="str">"数学平均分:"</span>, df[<span class="str">"数学"</span>].<span class="fn">mean</span>())</pre>
+  <div class="code-output"></div>
+</div>`
+      },
+      {
+        title: "CSV 与数据筛选",
+        icon: "📁",
+        content: `<div class="code-block">
+  <div class="code-header"><span>python</span><button class="run-btn" onclick="runCode(this)">▶ 运行</button></div>
+  <pre><span class="kw">import</span> pandas <span class="kw">as</span> pd
+
+df = pd.<span class="fn">DataFrame</span>({
+    <span class="str">"姓名"</span>: [<span class="str">"张三"</span>, <span class="str">"李四"</span>, <span class="str">"王五"</span>, <span class="str">"赵六"</span>],
+    <span class="str">"数学"</span>: [<span class="nb">85</span>, <span class="nb">92</span>, <span class="nb">78</span>, <span class="nb">88</span>],
+    <span class="str">"英语"</span>: [<span class="nb">92</span>, <span class="nb">85</span>, <span class="nb">90</span>, <span class="nb">76</span>],
+    <span class="str">"班级"</span>: [<span class="str">"A"</span>, <span class="str">"B"</span>, <span class="str">"A"</span>, <span class="str">"B"</span>]
+})
+
+<span class="cm"># 筛选：数学>85 的学生</span>
+print(df[df[<span class="str">"数学"</span>] > <span class="nb">85</span>])
+
+<span class="cm"># 按班级分组平均分</span>
+print(df.<span class="fn">groupby</span>(<span class="str">"班级"</span>).<span class="fn">mean</span>())
+
+<span class="cm"># 添加平均分列</span>
+df[<span class="str">"平均分"</span>] = df[[<span class="str">"数学"</span>, <span class="str">"英语"</span>]].<span class="fn">mean</span>(axis=<span class="nb">1</span>)
+print(df)</pre>
+  <div class="code-output"></div>
+</div>`
+      },
+      {
+        title: "requests API 调用",
+        icon: "🌐",
+        content: `<div class="code-block">
+  <div class="code-header"><span>python</span><button class="run-btn" onclick="runCode(this)">▶ 运行</button></div>
+  <pre><span class="kw">import</span> requests
+
+<span class="cm"># 调一个免费的 API（JSONPlaceholder）</span>
+response = requests.<span class="fn">get</span>(<span class="str">"https://jsonplaceholder.typicode.com/posts/1"</span>)
+print(<span class="str">"状态码:"</span>, response.status_code)
+data = response.<span class="fn">json</span>()
+print(<span class="str">"标题:"</span>, data[<span class="str">"title"</span>])
+
+<span class="cm"># POST 请求</span>
+post_data = {<span class="str">"title"</span>: <span class="str">"Bill的帖子"</span>, <span class="str">"body"</span>: <span class="str">"内容"</span>, <span class="str">"userId"</span>: <span class="nb">1</span>}
+r = requests.<span class="fn">post</span>(<span class="str">"https://jsonplaceholder.typicode.com/posts"</span>, json=post_data)
+print(<span class="str">"创建成功，ID:"</span>, r.<span class="fn">json</span>()[<span class="str">"id"</span>])</pre>
+  <div class="code-output"></div>
+</div>`
+      }
+    ],
+    practices: [
+      {
+        title: "练习 1：CSV 数据清洗",
+        desc: "读取 CSV，处理缺失值，筛选并输出统计结果。",
+        solution: `import pandas as pd
+
+df = pd.DataFrame({
+    "name": ["Alice", "Bob", "Charlie", "David"],
+    "age": [25, None, 35, 28],
+    "city": ["Beijing", "Shanghai", None, "Guangzhou"],
+    "score": [88, 92, 77, 85]
+})
+
+print("原始数据:")
+print(df)
+
+df["age"] = df["age"].fillna(df["age"].mean())
+df["city"] = df["city"].fillna("Unknown")
+print("\\n清洗后:")
+print(df)
+print("\\n平均分:", df["score"].mean())`
+      },
+      {
+        title: "练习 2：API 数据获取与保存",
+        desc: "调用免费API获取数据，存入CSV文件。",
+        solution: `import requests
+import pandas as pd
+
+r = requests.get("https://jsonplaceholder.typicode.com/users")
+users = r.json()
+
+df = pd.DataFrame([{
+    "name": u["name"],
+    "email": u["email"],
+    "city": u["address"]["city"]
+} for u in users])
+
+print(df.head())
+df.to_csv("/tmp/users.csv", index=False, encoding="utf-8")
+print("\\n已保存到 /tmp/users.csv")`
+      }
+    ],
+    daily: [
+      "pandas DataFrame 创建和基本操作",
+      "CSV 文件读写与数据筛选",
+      "数据清洗：缺失值、重复值处理",
+      "requests GET/POST 请求练习",
+      "综合：API 数据获取 + CSV 保存",
+      "数据分组汇总练习",
+      "休息"
+    ]
+  },
+  {
+    num: 5,
+    title: "数据可视化",
+    desc: "NumPy数组、Matplotlib绑定图表（折线/柱状/散点）",
+    goals: ["NumPy数组操作", "Matplotlib基础绑定", "折线/柱状/散点图", "图表美化", "数据分析绑定"],
+    topics: [
+      {
+        title: "NumPy 入门",
+        icon: "🔢",
+        content: `<div class="code-block">
+  <div class="code-header"><span>python</span><button class="run-btn" onclick="runCode(this)">▶ 运行</button></div>
+  <pre><span class="kw">import</span> numpy <span class="kw">as</span> np
+
+a = np.<span class="fn">array</span>([<span class="nb">1</span>, <span class="nb">2</span>, <span class="nb">3</span>, <span class="nb">4</span>, <span class="nb">5</span>])
+b = np.<span class="fn">arange</span>(<span class="nb">0</span>, <span class="nb">10</span>, <span class="nb">2</span>)       <span class="cm"># [0, 2, 4, 6, 8]</span>
+c = np.<span class="fn">linspace</span>(<span class="nb">0</span>, <span class="nb">1</span>, <span class="nb">5</span>)        <span class="cm"># [0, 0.25, 0.5, 0.75, 1]</span>
+d = np.<span class="fn">zeros</span>((<span class="nb">3</span>, <span class="nb">4</span>))           <span class="cm"># 3x4 全0矩阵</span>
+
+print(<span class="str">"数组 a:"</span>, a)
+print(<span class="str">"统计: 和={}, 均值={}, 最大={}"</span>.<span class="fn">format</span>(a.<span class="fn">sum</span>(), a.<span class="fn">mean</span>(), a.<span class="fn">max</span>()))
+print(<span class="str">"b:"</span>, b)
+print(<span class="str">"c:"</span>, c)
+
+<span class="cm"># 数组运算</span>
+print(a * <span class="nb">2</span>)       <span class="cm"># [2, 4, 6, 8, 10]</span>
+print(a ** <span class="nb">2</span>)      <span class="cm"># [1, 4, 9, 16, 25]</span>
+print(np.<span class="fn">sqrt</span>(a)) <span class="cm"># 开方</span></pre>
+  <div class="code-output"></div>
+</div>`
+      },
+      {
+        title: "Matplotlib 绑定",
+        icon: "📈",
+        content: `<div class="code-block">
+  <div class="code-header"><span>python</span><button class="run-btn" onclick="runCode(this)">▶ 运行</button></div>
+  <pre><span class="kw">import</span> matplotlib.pyplot <span class="kw">as</span> plt
+<span class="kw">import</span> numpy <span class="kw">as</span> np
+
+<span class="cm"># 注意：Pyodide 环境绑定图片需要用 plt.show() 但这里我们用文本展示</span>
+x = np.<span class="fn">linspace</span>(<span class="nb">0</span>, <span class="nb">2</span>*np.pi, <span class="nb">100</span>)
+y = np.<span class="fn">sin</span>(x)
+
+<span class="cm"># 绑定一个简单图表的数据</span>
+print(<span class="str">"x 范围:"</span>, x[<span class="nb">0</span>].<span class="fn">round</span>(<span class="nb">2</span>), <span class="str">"到"</span>, x[-<span class="nb">1</span>].<span class="fn">round</span>(<span class="nb">2</span>))
+print(<span class="str">"y 范围:"</span>, y.<span class="fn">min</span>().<span class="fn">round</span>(<span class="nb">2</span>), <span class="str">"到"</span>, y.<span class="fn">max</span>().<span class="fn">round</span>(<span class="nb">2</span>))
+print(<span class="str">"周期 2π 的正弦波，共"</span>, <span class="fn">len</span>(x), <span class="str">"个数据点"</span>)
+
+<span class="cm"># 柱状图数据</span>
+months = [<span class="str">"1月"</span>, <span class="str">"2月"</span>, <span class="str">"3月"</span>, <span class="str">"4月"</span>, <span class="str">"5月"</span>]
+sales = [<span class="nb">120</span>, <span class="nb">85</span>, <span class="nb">160</span>, <span class="nb">200</span>, <span class="nb">175</span>]
+print(<span class="str">"\\n月度销售额:"</span>)
+<span class="kw">for</span> m, s <span class="kw">in</span> <span class="fn">zip</span>(months, sales):
+    bar = <span class="str">"█"</span> * <span class="fn">int</span>(s/<span class="nb">10</span>)
+    print(f<span class="str">"{m} {bar} {s}"</span>)</pre>
+  <div class="code-output"></div>
+</div>`
+      }
+    ],
+    practices: [
+      {
+        title: "练习 1：NumPy 数组统计",
+        desc: "创建一个包含100个随机数的数组，统计均值、中位数、标准差。",
+        solution: `import numpy as np
+
+arr = np.random.rand(100) * 100
+print(f"数组长度: {len(arr)}")
+print(f"均值: {arr.mean():.2f}")
+print(f"中位数: {np.median(arr):.2f}")
+print(f"标准差: {arr.std():.2f}")
+print(f"最大值: {arr.max():.2f}")
+print(f"最小值: {arr.min():.2f}")
+print(f"前10个数: {arr[:10].round(2)}")`
+      },
+      {
+        title: "练习 2：模拟股票数据",
+        desc: "生成模拟股票数据，用文本方式展示趋势。",
+        solution: `import numpy as np
+
+days = np.arange(1, 21)
+price = 100 + np.cumsum(np.random.randn(20) * 2)
+
+print("股票模拟数据（20天）")
+print("-" * 40)
+for d, p in zip(days, price):
+    bar = "█" * int((p - 90) / 2)
+    trend = "↑" if d > 1 and p > price[d-2] else "↓"
+    print(f"第{d:2d}天 价:{p:6.2f} {trend} {bar}")
+print(f"\\n期间涨跌: {price[-1] - price[0]:.2f}%")`
+      }
+    ],
+    daily: [
+      "NumPy 数组创建与基本操作",
+      "NumPy 统计函数练习",
+      "Matplotlib 安装与基础绑定",
+      "折线图和柱状图练习",
+      "散点图和数据分组练习",
+      "综合：做一个数据可视化项目",
+      "休息"
+    ]
+  },
+  {
+    num: 6,
+    title: "LLM API调用",
+    desc: "调用大模型API（智谱GLM/OpenAI），完成AI小工具",
+    goals: ["API Key申请", "智谱GLM调用", "OpenAI调用", "AI写作/摘要工具", "prompt工程"],
+    topics: [
+      {
+        title: "智谱 AI（GLM）",
+        icon: "🤖",
+        content: `<p>智谱是国内最推荐的 API，充值几块钱就有大量免费额度。</p>
+<div class="code-block">
+  <div class="code-header"><span>python</span><button class="run-btn" onclick="runCode(this)">▶ 运行</button></div>
+  <pre><span class="cm"># 安装: pip3 install zhipuai</span>
+<span class="kw">from</span> zhipuai <span class="kw">import</span> ZhipuAI
+
+client = ZhipuAI(api_key=<span class="str">"your-api-key"</span>)
+response = client.chat.completions.<span class="fn">create</span>(
+    model=<span class="str">"glm-4-flash"</span>,
+    messages=[
+        {<span class="str">"role"</span>: <span class="str">"user"</span>, <span class="str">"content"</span>: <span class="str">"用一句话介绍Python"</span>}
+    ]
+)
+print(response.<span class="fn">choices</span>[<span class="nb">0</span>].message.content)</pre>
+  <div class="code-output"></div>
+</div>
+<p>注册地址：https://open.bigmodel.cn/</p>`
+      },
+      {
+        title: "OpenAI API",
+        icon: "🌟",
+        content: `<div class="code-block">
+  <div class="code-header"><span>python</span><button class="run-btn" onclick="runCode(this)">▶ 运行</button></div>
+  <pre><span class="kw">import</span> openai
+
+openai.api_key = <span class="str">"your-api-key"</span>
+
+response = openai.chat.completions.<span class="fn">create</span>(
+    model=<span class="str">"gpt-4o-mini"</span>,
+    messages=[
+        {< class="str">"role"</span>: <span class="str">"user"</span>, <span class="str">"content"</span>: <span class="str">"Python的最大特点是什么？"</span>}
+    ]
+)
+print(response.<span class="fn">choices</span>[<span class="nb">0</span>].message.content)</pre>
+  <div class="code-output"></div>
+</div>`
+      }
+    ],
+    practices: [
+      {
+        title: "练习 1：AI 摘要工具",
+        desc: "写一个函数，传入长文本，返回AI摘要（需要真实API Key才能运行）。",
+        solution: `# 需要真实 API Key 才能运行
+def summarize_text(text, api_key):
+    """调用智谱 API 摘要文本"""
+    from zhipuai import ZhipuAI
+    client = ZhipuAI(api_key=api_key)
+    response = client.chat.completions.create(
+        model="glm-4-flash",
+        messages=[
+            {"role": "system", "content": "你是一个文本摘要助手，请简洁概括用户输入的内容。"},
+            {"role": "user", "content": f"请摘要以下内容:\\n{text}"}
+        ]
+    )
+    return response.choices[0].message.content
+
+# 示例用法：
+# summary = summarize_text("你的长文本...", "your-key")
+# print(summary)
+print("提示: 请填入真实的智谱 API Key 后使用此函数")`
+      }
+    ],
+    daily: [
+      "注册智谱AI，获取免费API Key",
+      "安装 zhipuai SDK，测试第一个API调用",
+      "学习 prompt 写法，优化返回结果",
+      "写一个 AI 问答工具",
+      "写一个 AI 摘要工具",
+      "AI 写作助手练习",
+      "休息"
+    ]
+  },
+  {
+    num: 7,
+    title: "定时任务与OCR",
+    desc: "schedule定时任务、Pillow图片处理、pytesseract文字识别",
+    goals: ["schedule定时任务", "Pillow图片处理", "pytesseract OCR", "错题拍照识别", "自动化工具"],
+    topics: [
+      {
+        title: "定时任务 schedule",
+        icon: "⏰",
+        content: `<div class="code-block">
+  <div class="code-header"><span>python</span><button class="run-btn" onclick="runCode(this)">▶ 运行</button></div>
+  <pre><span class="kw">import</span> schedule
+<span class="kw">import</span> time
+
+<span class="kw">def</span> <span class="fn">job</span>():
+    <span class="cm">"""每天早上9点执行的任务"""</span>
+    print(<span class="str">"✅ 任务执行中..."</span>)
+
+<span class="cm"># 定时调度示例</span>
+schedule.<span class="fn">every</span>().day.<span class="fn">at</span>(<span class="str">"09:00"</span>).<span class="fn">do</span>(job)
+schedule.<span class="fn">every</span>().monday.<span class="fn">at</span>(<span class="str">"10:00"</span>).<span class="fn">do</span>(job)
+schedule.<span class="fn">every</span>(<span class="nb">30</span>).<span class="fn">minutes</span>.<span class="fn">do</span>(job)
+
+<span class="cm"># 运行（实际使用时取消注释）</span>
+<span class="cm"># while True:</span>
+<span class="cm">#     schedule.run_pending()</span>
+<span class="cm">#     time.sleep(1)</span>
+
+print(<span class="str">"定时任务已设置（演示模式）"</span>)
+print(<span class="str">"每天 09:00 执行 job()"</span>)
+print(<span class="str">"每 30 分钟执行 job()"</span>)</pre>
+  <div class="code-output"></div>
+</div>`
+      },
+      {
+        title: "Pillow 图片处理",
+        icon: "🖼️",
+        content: `<div class="code-block">
+  <div class="code-header"><span>python</span><button class="run-btn" onclick="runCode(this)">▶ 运行</button></div>
+  <pre><span class="kw">from</span> PIL <span class="kw">import</span> Image, ImageFilter, ImageEnhance
+
+<span class="cm"># 创建一张测试图片</span>
+img = Image.<span class="fn">new</span>(<span class="str">"RGB"</span>, (<span class="nb">200</span>, <span class="nb">100</span>), color=(<span class="nb">70</span>, <span class="nb">130</span>, <span class="nb">180</span>))
+
+<span class="cm"># 模糊处理</span>
+blurred = img.<span class="fn">filter</span>(ImageFilter.GaussianBlur(<span class="nb">5</span>))
+
+<span class="cm"># 调整亮度</span>
+enhancer = ImageEnhance.Brightness(img)
+bright = enhancer.<span class="fn">enhance</span>(<span class="nb">1.5</span>)
+
+print(<span class="str">"图片已创建: 200x100 RGB"</span>)
+print(<span class="str">"已应用: 高斯模糊、亮度调整"</span>)
+
+<span class="cm"># 缩放和裁剪</span>
+img_resized = img.<span class="fn">resize</span>((<span class="nb">400</span>, <span class="nb">200</span>))
+img_cropped = img.<span class="fn">crop</span>((<span class="nb">50</span>, <span class="nb">25</span>, <span class="nb">150</span>, <span class="nb">75</span>))
+print(<span class="str">"缩放后: 400x200, 裁剪后: 100x50"</span>)</pre>
+  <div class="code-output"></div>
+</div>`
+      },
+      {
+        title: "OCR 文字识别",
+        icon: "📷",
+        content: `<div class="code-block">
+  <div class="code-header"><span>python</span><button class="run-btn" onclick="runCode(this)">▶ 运行</button></div>
+  <pre><span class="kw">import</span> pytesseract
+<span class="kw">from</span> PIL <span class="kw">import</span> Image
+
+<span class="cm"># 注意：macOS 需要先安装 Tesseract:</span>
+<span class="cm"># brew install tesseract</span>
+<span class="cm"># 中文识别: brew install tesseract-lang</span>
+
+<span class="cm"># 识别图片中的文字</span>
+<span class="cm"># text = pytesseract.image_to_string(Image.open("image.png"), lang='chi_sim')</span>
+
+<span class="cm"># 示例：创建一张含文字的图片并尝试识别</span>
+img = Image.<span class="fn">new</span>(<span class="str">"RGB"</span>, (<span class="nb">300</span>, <span class="nb">60</span>), color=<span class="str">"white"</span>)
+<span class="cm"># 注意：Pyodide 环境无法运行真实 OCR</span>
+print(<span class="str">"OCR 示例（需要本地环境 Tesseract 支持）:"</span>)
+print(<span class="str">"提示：确保已安装 tesseract: brew install tesseract"</span>)
+print(<span class="str">"中文语言包: brew install tesseract-lang"</span>)
+print(<span class="str">"\\npytesseract.image_to_string(Image.open('错题.jpg'), lang='chi_sim')"</span>)</pre>
+  <div class="code-output"></div>
+</div>`
+      }
+    ],
+    practices: [
+      {
+        title: "练习 1：错题拍照识别",
+        desc: "拍照 → 识别文字 → 保存到 Markdown 文件",
+        solution: `from PIL import Image
+import pytesseract
+import datetime
+
+def ocr_homework(image_path):
+    """拍照识别错题"""
+    img = Image.open(image_path)
+    text = pytesseract.image_to_string(img, lang='chi_sim')
+    return text
+
+def save_to_markdown(question_text, subject="数学"):
+    """保存到 Markdown"""
+    date = datetime.datetime.now().strftime("%Y-%m-%d")
+    filename = f"/tmp/错题_{date}.md"
+    content = f"# {subject}错题 - {date}\\n\\n## 题目\\n{question_text}\\n\\n## 分析\\n\\n## 答案\\n"
+    with open(filename, "w", encoding="utf-8") as f:
+        f.write(content)
+    return filename
+
+# 示例
+# text = ocr_homework("/path/to/photo.jpg")
+# file = save_to_markdown(text, "数学")
+# print(f"已保存到: {file}")
+print("请填入真实图片路径运行此脚本")`
+      }
+    ],
+    daily: [
+      "安装 schedule 和 Pillow",
+      "schedule 定时任务练习",
+      "Pillow 图片缩放、裁剪、滤镜",
+      "安装 Tesseract OCR",
+      "OCR 识别中英文文字",
+      "综合：错题拍照 → 识别 → 存笔记",
+      "休息"
+    ]
+  },
+  {
+    num: 8,
+    title: "综合项目",
+    desc: "整合前7周技能，venv虚拟环境，完整项目开发",
+    goals: ["venv虚拟环境", "pip依赖管理", "项目结构设计", "实用工具开发", "打包发布基础"],
+    topics: [
+      {
+        title: "虚拟环境 venv",
+        icon: "📦",
+        content: `<div class="code-block">
+  <div class="code-header"><span>bash</span><button class="run-btn" onclick="runCode(this)">▶ 运行</button></div>
+  <pre><span class="cm"># 创建虚拟环境</span>
+python3 -m venv myenv
+
+<span class="cm"># 激活（macOS/Linux）</span>
+source myenv/bin/activate
+
+<span class="cm"># 激活（Windows）</span>
+myenv\\Scripts\\activate
+
+<span class="cm"># 安装依赖</span>
+pip install requests pandas pillow schedule
+
+<span class="cm"># 导出依赖列表</span>
+pip freeze > requirements.txt
+
+<span class="cm"># 批量安装</span>
+pip install -r requirements.txt</pre>
+  <div class="code-output"></div>
+</div>`
+      },
+      {
+        title: "项目结构",
+        icon: "🏗️",
+        content: `<div class="code-block">
+  <div class="code-header"><span>python</span><button class="run-btn" onclick="runCode(this)">▶ 运行</button></div>
+  <pre><span class="cm"># 典型 Python 项目结构</span>
+<span class="kw">import</span> os
+
+project = <span class="str">"""
+myproject/
+├── myenv/              # 虚拟环境（不需要上传）
+├── src/                # 源代码
+│   ├── __init__.py
+│   ├── main.py         # 入口文件
+│   ├── config.py       # 配置文件
+│   └── utils.py        # 工具函数
+├── data/               # 数据文件
+│   ├── raw/
+│   └── processed/
+├── output/             # 输出结果
+├── tests/              # 测试代码
+├── requirements.txt   # 依赖列表
+└── README.md           # 项目说明
+"""</span>
+print(project)
+print(<span class="str">"提示: __init__.py 让文件夹变成 Python 包"</span>)</pre>
+  <div class="code-output"></div>
+</div>`
+      },
+      {
+        title: "实用工具：天气查询",
+        icon: "🌤️",
+        content: `<div class="code-block">
+  <div class="code-header"><span>python</span><button class="run-btn" onclick="runCode(this)">▶ 运行</button></div>
+  <pre><span class="kw">import</span> requests
+<span class="kw">import</span> json
+
+<span class="kw">def</span> <span class="fn">get_weather</span>(city=<span class="str">"广州"</span>):
+    <span class="cm">"""获取天气（使用免费API）"""</span>
+    <span class="kw">try</span>:
+        url = f<span class="str">"https://wttr.in/{city}?format=j1"</span>
+        r = requests.<span class="fn">get</span>(url, timeout=<span class="nb">5</span>)
+        data = r.<span class="fn">json</span>()
+        current = data[<span class="str">"current_condition"</span>][<span class="nb">0</span>]
+        temp = current[<span class="str">"temp_C"</span>]
+        desc = current[<span class="str">"weatherDesc"</span>][<span class="str">"value"</span>]
+        print(f<span class="str">"📍 {city} 天气: {desc}, 温度 {temp}°C"</span>)
+        <span class="kw">return</span> {<span class="str">"city"</span>: city, <span class="str">"temp"</span>: temp, <span class="str">"desc"</span>: desc}
+    <span class="kw">except</span> Exception <span class="kw">as</span> e:
+        print(f<span class="str">"查询失败: {e}"</span>)
+        <span class="kw">return None</span>
+
+result = <span class="fn">get_weather</span>(<span class="str">"Guangzhou"</span>)
+result2 = <span class="fn">get_weather</span>(<span class="str">"Shanghai"</span>)</pre>
+  <div class="code-output"></div>
+</div>`
+      }
+    ],
+    practices: [
+      {
+        title: "项目：个人记账本",
+        desc: "整合文件读写 + JSON + 命令行界面，做一个完整的记账工具。",
+        solution: `import json
+import os
+from datetime import datetime
+
+FILE = "/tmp/accounts.json"
+
+def load():
+    if os.path.exists(FILE):
+        with open(FILE) as f:
+            return json.load(f)
+    return []
+
+def save(data):
+    with open(FILE, "w") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+def add_record(typ, amount, note):
+    data = load()
+    data.append({
+        "type": typ,
+        "amount": amount,
+        "note": note,
+        "date": datetime.now().strftime("%Y-%m-%d %H:%M")
+    })
+    save(data)
+    print(f"✅ 已记录: {typ} {amount}元 ({note})")
+
+def summary():
+    data = load()
+    income = sum(r["amount"] for r in data if r["type"] == "收入")
+    expense = sum(r["amount"] for r in data if r["type"] == "支出")
+    print(f"💰 总收入: {income}元, 总支出: {expense}元, 结余: {income-expense}元")
+    print(f"📝 共 {len(data)} 条记录")
+
+add_record("支出", 35, "午餐")
+add_record("收入", 500, "兼职")
+summary()`,
+        newTab: true
+      }
+    ],
+    daily: [
+      "搭建 venv 虚拟环境，安装依赖",
+      "设计项目结构，创建几个基础文件",
+      "天气查询工具开发",
+      "个人记账本核心功能开发",
+      "数据分析和报表功能",
+      "整理代码，写 README",
+      "休息或继续完善项目"
+    ]
+  },
+  {
+    num: 9,
+    title: "Trae工具实战",
+    desc: "熟练使用Trae AI辅助编程，AI对话、代码补全、批量修改",
+    goals: ["Trae安装配置", "AI对话编程", "代码补全技巧", "批量代码修改", "AI提升学习效率"],
+    topics: [
+      {
+        title: "Trae 是什么",
+        icon: "🚀",
+        content: `<p><strong>Trae</strong> 是字节跳动推出的 AI 编程工具，基于 IntelliJ IDEA，集成了 AI 对话和代码补全功能。</p>
+<ul style="margin:12px 0;font-size:14px;color:var(--muted)">
+  <li>🌐 官网：https://www.trae.ai/</li>
+  <li>💰 价格：基础版免费，高级功能按需订阅</li>
+  <li>🖥️ 支持：macOS / Windows / Linux</li>
+  <li>🤖 模型：Claude 3.5 / GPT-4o / 智谱 GLM 等</li>
+</ul>`
+      },
+      {
+        title: "AI 对话编程",
+        icon: "💬",
+        content: `<p>Trae 的 AI 对话窗口可以：</p>
+<ul style="margin:12px 0;font-size:14px;color:var(--muted)">
+  <li>✏️ <strong>写代码</strong>：描述需求，AI 生成代码</li>
+  <li>🔍 <strong>解释代码</strong>：选中代码，让 AI 解释</li>
+  <li>🐛 <strong>Debug</strong>：粘贴错误信息，AI 帮你排查</li>
+  <li>📝 <strong>写注释</strong>：让 AI 给代码加注释和文档</li>
+  <li>🔄 <strong>改写</strong>：让 AI 把代码改成更 Pythonic 的风格</li>
+</ul>
+<div class="code-block">
+  <div class="code-header"><span>示例 Prompt</span></div>
+  <pre><span class="cm"># 在 Trae 对话框输入：</span>
+<span class="str">"帮我写一个函数，接收一个列表，返回其中所有偶数的平方"</span>
+
+<span class="cm"># AI 会返回：</span>
+<span class="kw">def</span> <span class="fn">even_squares</span>(numbers):
+    <span class="kw">return</span> [x**<span class="nb">2</span> <span class="kw">for</span> x <span class="kw">in</span> numbers <span class="kw">if</span> x % <span class="nb">2</span> == <span class="nb">0</span>]</pre>
+</div>`
+      },
+      {
+        title: "代码补全技巧",
+        icon: "✨",
+        content: `<ul style="margin:12px 0;font-size:14px;color:var(--muted)">
+  <li>📥 <strong>Tab 补全</strong>：AI 给出建议时，按 Tab 接受</li>
+  <li>⌨️ <strong>Ctrl+Enter</strong>：手动触发代码补全</li>
+  <li>💡 <strong>Alt+Tab</strong>：在多个补全建议间切换</li>
+  <li>📝 <strong>注释生成代码</strong>：写注释描述需求，AI 补全代码</li>
+</ul>
+<div class="code-block">
+  <div class="code-header"><span>技巧示例</span></div>
+  <pre><span class="cm"># 在 Trae 中输入这段注释，然后回车，AI 会补全代码：</span>
+<span class="cm"># 过滤列表中的空字符串并转成整数</span>
+<span class="cm"># (AI 自动补全下一行)</span>
+result = [<span class="fn">int</span>(x) <span class="kw">for</span> x <span class="kw">in</span> strings <span class="kw">if</span> x.strip()]</pre>
+</div>`
+      }
+    ],
+    practices: [
+      {
+        title: "练习：让 Trae 帮你写代码",
+        desc: "用 Trae AI 对话功能，让 AI 帮你写一个学生成绩排名程序。对比你自己写的和 AI 写的，学习 AI 的思路。",
+        solution: `# 这是你学完 9 周后的综合练习：
+# 用 Trae AI 帮助完成以下任务：
+
+# 任务1：用 AI 写一个函数，排序学生列表（按总分降序）
+# 任务2：用 AI 写一个函数，给成绩分级（A/B/C/D/E）
+# 任务3：用 AI 写一个函数，输出每个分数段的人数
+
+# 示例数据：
+students = [
+    {"name": "张三", "math": 85, "english": 92},
+    {"name": "李四", "math": 76, "english": 88},
+    {"name": "王五", "math": 93, "english": 79},
+    {"name": "赵六", "math": 88, "english": 76},
+]
+
+# 完成后，试着用 Trae 的批量修改功能，把变量名从 students 改成 student_list
+
+print("在 Trae 中练习：让 AI 帮你写这些函数！")`
+      }
+    ],
+    daily: [
+      "安装配置 Trae，熟悉界面",
+      "AI 对话：让 AI 解释一段陌生代码",
+      "AI 写代码：用 AI 生成一个函数",
+      "Debug 练习：用 AI 排查一个错误",
+      "代码补全：写注释让 AI 补全代码",
+      "批量修改：让 AI 重构一段代码",
+      "总结：AI 辅助编程的心得"
+    ]
+  }
+];
+
+// ============================================================
+// STATE
+// ============================================================
+let pyodide = null;
+let currentWeek = 1;
+let stats = { weeks: 0, days: 0, codes: 0, streak: 0 };
+let completedDays = {};  // week -> [day indexes]
+let checkedPractices = {};  // week -> [practice indexes]
+
+function loadState() {
+  try {
+    const s = localStorage.getItem('py-learn-state');
+    if (s) {
+      const d = JSON.parse(s);
+      stats = d.stats || stats;
+      completedDays = d.completedDays || {};
+      checkedPractices = d.checkedPractices || {};
+    }
+  } catch(e) {}
+}
+
+function saveState() {
+  try {
+    localStorage.setItem('py-learn-state', JSON.stringify({
+      stats, completedDays, checkedPractices
+    }));
+  } catch(e) {}
+}
+
+// ============================================================
+// PYODIDE
+// ============================================================
+async function initPyodide() {
+  const dot = document.getElementById('py-status-dot');
+  const text = document.getElementById('py-status-text');
+  const output = document.getElementById('py-output');
+
+  try {
+    pyodide = await loadPyodide({ indexURL: "https://cdn.jsdelivr.net/pyodide/v0.24.1/full/" });
+    dot.classList.add('ready');
+    text.textContent = 'Python 就绪';
+    output.innerHTML = '<span class="py-out">✅ Pyodide 加载成功！可以运行 Python 代码了\n</span>';
+    pyodide.runPython(`
+import sys
+from io import StringIO
+sys.stdout = StringIO()
+sys.stderr = StringIO()
+print("🐍 Python 环境就绪")
+`);
+    const out = pyodide.runPython('sys.stdout.getvalue()');
+    output.innerHTML = `<span class="py-out">✅ Pyodide 加载成功！可以运行 Python 代码了\n</span>`;
+  } catch(e) {
+    text.textContent = '加载失败';
+    output.innerHTML = `<span class="py-err">加载失败: ${e.message}</span>`;
+  }
+}
+
+function getOutput() {
+  try {
+    const out = pyodide.runPython('sys.stdout.getvalue()');
+    const err = pyodide.runPython('sys.stderr.getvalue()');
+    pyodide.runPython('sys.stdout.truncate(0); sys.stdout.seek(0)');
+    pyodide.runPython('sys.stderr.truncate(0); sys.stderr.seek(0)');
+    return { out, err };
+  } catch(e) {
+    return { out: '', err: e.message };
+  }
+}
+
+async function runCode(btn) {
+  if (!pyodide) { alert('Python 环境加载中，请稍候...'); return; }
+  const block = btn.closest('.code-block');
+  const pre = block.querySelector('pre');
+  const outDiv = block.querySelector('.code-output');
+  const code = pre.innerText;
+
+  btn.disabled = true;
+  btn.textContent = '运行中...';
+  outDiv.innerHTML = '<span style="color:var(--muted)运行中...</span>';
+
+  try {
+    pyodide.runPython('sys.stdout.truncate(0); sys.stdout.seek(0)');
+    pyodide.runPython('sys.stderr.truncate(0); sys.stderr.seek(0)');
+
+    await pyodide.runPythonAsync(code);
+
+    const { out, err } = getOutput();
+    if (err && err.trim()) {
+      outDiv.innerHTML = `<span class="py-err">${err}</span>`;
+      outDiv.classList.add('error');
+    } else {
+      outDiv.textContent = out || '（无输出）';
+      outDiv.classList.remove('error');
+    }
+    stats.codes++;
+    updateStats();
+    saveState();
+  } catch(e) {
+    outDiv.innerHTML = `<span class="py-err">${e.message}</span>`;
+    outDiv.classList.add('error');
+  }
+
+  btn.disabled = false;
+  btn.textContent = '▶ 运行';
+}
+
+async function runQuickCode() {
+  const code = document.getElementById('quick-code').value;
+  if (!code.trim()) return;
+  const fakeBtn = document.querySelector('#right-panel .run-btn');
+  fakeBtn.textContent = '运行中...';
+  fakeBtn.disabled = true;
+
+  const output = document.getElementById('py-output');
+  output.innerHTML = '';
+
+  try {
+    pyodide.runPython('sys.stdout.truncate(0); sys.stdout.seek(0)');
+    pyodide.runPython('sys.stderr.truncate(0); sys.stderr.seek(0)');
+    await pyodide.runPythonAsync(code);
+    const { out, err } = getOutput();
+    output.innerHTML = (err ? `<span class="py-err">${err}</span>\n` : '') +
+                        (out ? `<span class="py-out">${out}</span>` : '<span class="py-out">（无输出）</span>');
+    stats.codes++;
+    updateStats();
+    saveState();
+  } catch(e) {
+    output.innerHTML = `<span class="py-err">${e.message}</span>`;
+  }
+
+  fakeBtn.disabled = false;
+  fakeBtn.textContent = '▶ 运行代码';
+}
+
+async function runPyCommand() {
+  const input = document.getElementById('py-input');
+  const code = input.value.trim();
+  if (!code) return;
+  input.value = '';
+
+  const output = document.getElementById('py-output');
+  output.innerHTML = '';
+
+  try {
+    pyodide.runPython('sys.stdout.truncate(0); sys.stdout.seek(0)');
+    pyodide.runPython('sys.stderr.truncate(0); sys.stderr.seek(0)');
+    await pyodide.runPythonAsync(code);
+    const { out, err } = getOutput();
+    output.innerHTML = (err ? `<span class="py-err">${err}</span>\n` : '') +
+                        `<span class="py-out">${out || '（无输出）'}</span>`;
+    stats.codes++;
+    updateStats();
+    saveState();
+  } catch(e) {
+    output.innerHTML = `<span class="py-err">${e.message}</span>`;
+  }
+}
+
+// ============================================================
+// WEEK RENDERING
+// ============================================================
+function showWeek(num) {
+  currentWeek = num;
+  const w = WEEKS[num - 1];
+
+  document.querySelectorAll('.week-btn').forEach(b => {
+    b.classList.toggle('active', parseInt(b.dataset.week) === num);
+    const wn = parseInt(b.dataset.week);
+    if (completedDays[wn] && completedDays[wn].length >= 7) b.classList.add('done');
+    else b.classList.remove('done');
+  });
+
+  document.getElementById('header-week-num').textContent = num;
+  document.getElementById('header-title').textContent = w.title;
+  document.getElementById('header-desc').textContent = w.desc;
+  document.getElementById('header-goals').innerHTML = w.goals.map(g =>
+    `<span class="goal-tag">${g}</span>`).join('');
+
+  // Overview
+  document.getElementById('section-overview').innerHTML = `
+    <h3><span class="icon">📖</span>学习内容概览</h3>
+    <p>本周（${w.title}）将学习：${w.desc}</p>
+  `;
+
+  // Topics
+  document.getElementById('section-topics').innerHTML = `
+    <h3><span class="icon">📚</span>知识要点</h3>
+    ${w.topics.map(t => `
+      <div style="margin-bottom:24px">
+        <h4 style="font-size:15px;margin-bottom:10px;display:flex;align-items:center;gap:8px">
+          <span>${t.icon}</span> ${t.title}
+        </h4>
+        ${t.content}
+      </div>
+    `).join('')}
+  `;
+
+  // Practice
+  const practicesHtml = w.practices.map((p, i) => {
+    const isChecked = checkedPractices[num] && checkedPractices[num].includes(i);
+    return `
+      <div class="practice-card">
+        <h4>${p.title}</h4>
+        <p>${p.desc}</p>
+        ${p.newTab ? '' : `
+          <div class="code-block">
+            <div class="code-header">
+              <span>solution.py</span>
+              <button class="run-btn" onclick="runPractice(${num - 1}, ${i}, this)">▶ 运行</button>
+            </div>
+            <pre name="code">${escapeHtml(p.solution)}</pre>
+            <div class="code-output"></div>
+          </div>
+        `}
+        <button class="check-in-btn ${isChecked ? 'checked' : ''}" onclick="togglePractice(${num}, ${i}, this)">
+          ${isChecked ? '✅ 已完成' : '✓ 打卡完成'}
+        </button>
+        ${p.newTab ? `<button class="run-btn" style="margin-left:8px" onclick="runPractice(${num - 1}, ${i}, this)">▶ 运行</button>` : ''}
+      </div>
+    `;
+  }).join('');
+
+  document.getElementById('section-practice').innerHTML = `
+    <h3><span class="icon">🏋️</span>实践练习</h3>
+    ${practicesHtml}
+  `;
+
+  // Daily plan
+  const days = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+  const today = new Date().getDay();
+  const adjustedToday = today === 0 ? 6 : today - 1; // Monday=0
+
+  const daysHtml = days.map((d, i) => {
+    const isDone = completedDays[num] && completedDays[num].includes(i);
+    const isCurrent = i === adjustedToday;
+    return `
+      <div class="day-item ${isDone ? 'done' : ''} ${isCurrent && !isDone ? 'current' : ''}"
+           onclick="toggleDay(${num}, ${i}, this)">
+        <div class="day-name">${d}</div>
+        <div class="day-status">${isDone ? '✅' : isCurrent ? '▶' : '○'}</div>
+      </div>
+    `;
+  }).join('');
+
+  document.getElementById('section-daily').innerHTML = `
+    <h3><span class="icon">📅</span>每日任务</h3>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:4px">点击日期标记今日任务完成</p>
+    <div class="day-grid">${daysHtml}</div>
+    <div style="margin-top:16px">
+      <button class="check-in-btn ${completedDays[num] && completedDays[num].length >= 7 ? 'checked' : ''}"
+              onclick="weekCheckIn(${num}, this)">
+        ${completedDays[num] && completedDays[num].length >= 7 ? '🎉 本周已完成' : '📝 本周打卡'}
+      </button>
+    </div>
+  `;
+
+  // Mobile: close sidebar
+  document.getElementById('sidebar').classList.remove('open');
+  updateStats();
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+async function runPractice(weekIdx, practiceIdx, btn) {
+  const w = WEEKS[weekIdx];
+  const p = w.practices[practiceIdx];
+  const block = btn.closest('.practice-card').querySelector('.code-block');
+  if (!block) return;
+
+  const pre = block.querySelector('pre');
+  const outDiv = block.querySelector('.code-output');
+  const code = pre.innerText;
+
+  btn.disabled = true;
+  btn.textContent = '运行中...';
+  outDiv.innerHTML = '<span style="color:var(--muted)运行中...</span>';
+
+  try {
+    pyodide.runPython('sys.stdout.truncate(0); sys.stdout.seek(0)');
+    pyodide.runPython('sys.stderr.truncate(0); sys.stderr.seek(0)');
+    await pyodide.runPythonAsync(code);
+    const { out, err } = getOutput();
+    if (err && err.trim()) {
+      outDiv.innerHTML = `<span class="py-err">${err}</span>`;
+      outDiv.classList.add('error');
+    } else {
+      outDiv.textContent = out || '（无输出）';
+      outDiv.classList.remove('error');
+    }
+    stats.codes++;
+    updateStats();
+    saveState();
+  } catch(e) {
+    outDiv.innerHTML = `<span class="py-err">${e.message}</span>`;
+    outDiv.classList.add('error');
+  }
+
+  btn.disabled = false;
+  btn.textContent = '▶ 运行';
+}
+
+function toggleDay(week, dayIdx, el) {
+  if (!completedDays[week]) completedDays[week] = [];
+  const idx = completedDays[week].indexOf(dayIdx);
+  if (idx >= 0) {
+    completedDays[week].splice(idx, 1);
+    el.classList.remove('done');
+    el.classList.remove('current');
+    el.querySelector('.day-status').textContent = '○';
+    updateStreak();
+  } else {
+    completedDays[week].push(dayIdx);
+    el.classList.add('done');
+    el.querySelector('.day-status').textContent = '✅';
+    updateStreak();
+  }
+  stats.days = Object.values(completedDays).flat().length;
+  updateStats();
+  saveState();
+}
+
+function togglePractice(week, practiceIdx, btn) {
+  if (!checkedPractices[week]) checkedPractices[week] = [];
+  const idx = checkedPractices[week].indexOf(practiceIdx);
+  if (idx >= 0) {
+    checkedPractices[week].splice(idx, 1);
+    btn.classList.remove('checked');
+    btn.textContent = '✓ 打卡完成';
+  } else {
+    checkedPractices[week].push(practiceIdx);
+    btn.classList.add('checked');
+    btn.textContent = '✅ 已完成';
+  }
+  saveState();
+}
+
+function weekCheckIn(week, btn) {
+  if (!completedDays[week]) completedDays[week] = [];
+  const w = WEEKS[week - 1];
+  // Mark all 7 days done
+  for (let i = 0; i < 7; i++) {
+    if (!completedDays[week].includes(i)) {
+      completedDays[week].push(i);
+    }
+  }
+  btn.classList.add('checked');
+  btn.textContent = '🎉 本周已完成';
+  stats.days = Object.values(completedDays).flat().length;
+
+  // Count completed weeks
+  let completed = 0;
+  for (let i = 1; i <= 9; i++) {
+    if (completedDays[i] && completedDays[i].length >= 7) completed++;
+  }
+  stats.weeks = completed;
+  updateStreak();
+  updateStats();
+  updateWeekButtons();
+  saveState();
+  showWeek(week);
+}
+
+function updateStreak() {
+  // Count consecutive days up to today
+  const today = new Date();
+  let streak = 0;
+  for (let i = 0; i < 30; i++) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const dow = d.getDay();
+    if (dow === 0) continue; // skip Sunday
+    const dateKey = `${d.getMonth()+1}/${d.getDate()}`;
+    let found = false;
+    for (const week in completedDays) {
+      // approximate streak check
+    }
+    if (found) streak++;
+    else if (i > 0) break;
+  }
+  stats.streak = streak;
+  document.getElementById('streak-count').textContent = streak;
+}
+
+function updateStats() {
+  document.getElementById('stat-weeks').textContent = stats.weeks;
+  document.getElementById('stat-days').textContent = stats.days;
+  document.getElementById('stat-codes').textContent = stats.codes;
+  document.getElementById('stat-streak').textContent = stats.streak;
+
+  const total = Math.round((stats.weeks / 9) * 100);
+  document.getElementById('total-progress-bar').style.width = total + '%';
+  document.getElementById('total-progress-text').textContent = `已完成 ${stats.weeks}/9 周`;
+}
+
+function updateWeekButtons() {
+  document.querySelectorAll('.week-btn').forEach(b => {
+    const wn = parseInt(b.dataset.week);
+    const done = completedDays[wn] && completedDays[wn].length >= 7;
+    b.classList.toggle('done', done);
+  });
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+}
+
+// ============================================================
+// INIT
+// ============================================================
+loadState();
+updateWeekButtons();
+showWeek(1);
+initPyodide();
+updateStats();
+</script>
+</body>
+</html>
